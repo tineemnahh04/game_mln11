@@ -1,0 +1,119 @@
+🧠 BƯỚC 0: SYSTEM PROMPT (Dùng để thiết lập bối cảnh ban đầu)
+
+Role: You are an Expert React WebGL Developer and Senior Software Architect.
+
+Project Context: We are building a scroll-driven 3D educational puzzle game called "Dialectical Flow" for a Philosophy 111 course. The game has 3 main branches, an inventory system with manual crafting, and 25 questions.
+
+Tech Stack: > * Core: React (Vite)
+
+3D Engine: three, @react-three/fiber, @react-three/drei
+
+Animation: gsap (ScrollTrigger, MotionPathPlugin), framer-motion
+
+State Management: zustand
+
+2D UI Framework: react-bootstrap, react-icons
+
+Architecture Rules:
+
+Strict separation of concerns (SOLID principles). Keep 3D Canvas rendering strictly isolated from 2D React DOM elements to prevent global re-renders.
+
+Use useMemo and useRef heavily in 3D components to maintain 60 FPS.
+
+State must be globally managed via Zustand, avoiding prop-drilling.
+
+🚀 PHASE 1: GAME LOGIC & STATE MANAGEMENT (Trái tim của Game)
+Mục tiêu: Xây dựng kho dữ liệu và logic quản lý túi đồ, tiến độ game mà chưa cần làm giao diện.
+
+Prompt gửi AI:
+
+Task: Phase 1 - State Management (Zustand) & Data Layer
+
+Create a file src/data/questions.json containing a sample array of 25 philosophy questions. Each question object must have: id, text, options (array of 4 strings), correctAnswerIndex, rewardItemId (nullable), and branchId.
+
+Create a Zustand store at src/store/useGameStore.js. The store must manage:
+
+inventory: Array of collected item objects (e.g., { id: 'stone', name: 'Khối đá', icon: '...' }).
+
+unlockedBranches: Array of branch IDs that the user has unlocked.
+
+currentQuestionIndex: Tracking the user's progress.
+
+Implement actions in the store:
+
+addItem(item): Adds an item to inventory.
+
+craftItem(itemA_id, itemB_id): Checks a predefined recipe dictionary. If matched, removes item A and B, adds the new crafted item (e.g., 'stone' + 'mirror' = 'key_branch_2'), and triggers a success state.
+
+answerQuestion(questionId, selectedIndex): Validates the answer.
+
+Provide the clean, strictly typed (via JSDoc) code for the JSON structure and the Zustand store.
+
+🎨 PHASE 2: LỚP GIAO DIỆN 2D UI & HỆ THỐNG INVENTORY
+Mục tiêu: Dựng form túi đồ có thể Drag & Drop bằng React Bootstrap để thao tác với Zustand store.
+
+Prompt gửi AI:
+
+Task: Phase 2 - 2D UI and Inventory System
+
+We need to build the 2D overlay UI using React Bootstrap and framer-motion for animations. Connect this directly to the Zustand store from Phase 1.
+
+Create a HUD.jsx component fixed at the top right with a Backpack icon (react-icons). It displays the current inventory.length.
+
+Create an InventoryModal.jsx (using React Bootstrap's Modal).
+
+Implement a manual Drag & Drop crafting interface inside the modal using standard HTML5 Drag and Drop API or react-dnd:
+
+Left side: A CSS grid displaying items currently in the Zustand inventory.
+
+Right side: A "Crafting Table" with 2 empty slots.
+
+Logic: When the user drags two compatible items into the slots, call the craftItem action from Zustand.
+
+Ensure the UI looks modern, dark-themed, and intuitive. Provide the component codes.
+
+🌌 PHASE 3: LỚP MÔI TRƯỜNG 3D & CAMERA RIG
+Mục tiêu: Dựng cảnh 3D cơ bản và thiết lập đường bay cong cho Camera.
+
+Prompt gửi AI:
+
+Task: Phase 3 - 3D Environment & GSAP Camera Rig
+
+Now we build the @react-three/fiber canvas. We will use dummy meshes (Cubes/Spheres) for now instead of loading heavy .glb files.
+
+Create MainCanvas.jsx containing the <Canvas> setup (ambient light, directional light, fog).
+
+Create Scene1.jsx: A simple glowing network of points/spheres representing the Neural Network hub.
+
+Create CameraRig.jsx: This is the most critical part.
+
+Use @react-three/drei's <ScrollControls> to sync scroll progress.
+
+Define an array of Vector3 points acting as a curved path through the scene.
+
+Inside useFrame, use GSAP or CatmullRomCurve3 to interpolate the camera's position and lookAt based on the scroll offset (scroll.offset). The camera must move smoothly along a winding curve, NOT a straight line.
+
+Provide the heavily optimized code for these R3F components. Use useMemo for geometries and materials.
+
+🕹️ PHASE 4: TÍCH HỢP 3D UI & GAME LOOP
+Mục tiêu: Ráp dữ liệu câu hỏi lên bảng gỗ 3D và xử lý sự kiện rớt đồ.
+
+Prompt gửi AI:
+
+Task: Phase 4 - In-world 3D UI and Item Drops
+
+We need to merge the Zustand logic with the 3D world.
+
+Create a QuestionBoard.jsx component. It renders a 3D wooden sign (a simple BoxGeometry for now).
+
+Attach @react-three/drei's <Html> component to the surface of this board to render the question text and 4 answer buttons (using React Bootstrap buttons).
+
+Fetch the current question from the Zustand store.
+
+Interaction:
+
+When a correct answer button is clicked: Trigger an animation (Framer Motion inside <Html>), and spawn an ItemDrop.jsx (a spinning 3D mesh) in front of the board.
+
+When the user clicks the ItemDrop 3D mesh (using R3F onClick pointer event): Call addItem() in Zustand, and remove the mesh from the scene.
+
+Provide the code for QuestionBoard and ItemDrop. Pay attention to event propagation in 3D space (e.stopPropagation()).

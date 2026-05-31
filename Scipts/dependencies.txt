@@ -1,0 +1,50 @@
+📦 CÂU LỆNH CÀI ĐẶT TỔNG HỢP (Dùng Terminal/CMD)
+Bash
+npm install three @react-three/fiber @react-three/drei gsap framer-motion zustand react-icons
+(Nếu team bạn dùng TailwindCSS, hãy cài đặt thêm Tailwind theo hướng dẫn của Vite).
+
+🔍 CHI TIẾT TỪNG NHÓM MODULE & VAI TRÒ TRONG GAME
+1. Nhóm 3D & WebGL (Xương sống hiển thị)
+Đây là nhóm chịu trách nhiệm vẽ bộ não, khu rừng, và các vật thể 3D lên trình duyệt.
+
+three: Thư viện lõi Three.js. Bắt buộc phải có vì nó chứa các class toán học (Vector3, Euler) và core WebGL.
+
+@react-three/fiber (R3F): Cầu nối giúp bạn viết code Three.js dưới dạng các component React (<mesh>, <boxGeometry>). Giúp quản lý vòng đời (lifecycle) của môi trường 3D dễ dàng hơn.
+
+@react-three/drei: Đây là "bảo bối" của dự án này. Nó chứa các component dựng sẵn cực kỳ mạnh mẽ:
+
+<Html>: Dùng để gắn form câu hỏi HTML/CSS đè lên mặt bảng gỗ 3D một cách hoàn hảo.
+
+<ScrollControls>: Dùng để đồng bộ thanh cuộn chuột với không gian 3D.
+
+<useGLTF>: Hook để load file model .glb (cây cối, vật phẩm) vào game.
+
+<Environment>: Tạo ánh sáng môi trường tự nhiên cực đẹp mà không cần setup đèn thủ công phức tạp.
+
+2. Nhóm Animation & Chuyển cảnh (Linh hồn chuyển động)
+Đảm bảo cảm giác chơi game mượt mà như phim điện ảnh.
+
+gsap (GreenSock Animation Platform): Thư viện diễn hoạt số 1 hiện nay.
+
+Nhiệm vụ: Bạn sẽ dùng nó kết hợp với plugin MotionPathPlugin của GSAP để làm camera bay uốn lượn theo các rễ cây nơ-ron (đường cong Bezier) thay vì bay theo đường thẳng nhàm chán.
+
+framer-motion: Thư viện animation dành riêng cho React DOM.
+
+Nhiệm vụ: Chuyên xử lý mượt các hiệu ứng của UI 2D như: Modal túi đồ hiện lên, rung lắc nút bấm khi trả lời sai câu hỏi, hiệu ứng hover vào vật phẩm.
+
+3. Nhóm Quản lý State & Logic Game (Bộ não hệ thống)
+zustand: Thư viện quản lý state cục bộ.
+
+Tại sao không dùng Redux hay Context API? Vì R3F rất nhạy cảm với việc re-render. Context API dễ làm giật lag cả môi trường 3D khi túi đồ cập nhật. Zustand cho phép các component UI (Túi đồ) và 3D (Vật phẩm rơi ra) kết nối với nhau cực kỳ tối ưu, lấy data trực tiếp mà không cần bọc Provider.
+
+Nhiệm vụ: Lưu trữ mảng inventory (đồ đang có), unlockedNodes (các nhánh đã mở), và hàm craftItem() để ghép đồ.
+
+4. Nhóm Giao diện 2D & Tiện ích (Lớp da bên ngoài)
+TailwindCSS: Khuyến nghị dùng để style cho túi đồ, màn hình chờ, và form câu hỏi. Viết class trực tiếp giúp tốc độ code UI của các thành viên nhanh hơn đáng kể.
+
+react-icons: Thư viện icon. Dùng để lấy icon cái Balo (Túi đồ), icon bánh răng (Settings), mũi tên quay lại.
+
+5. Nhóm Tooling (Công cụ hỗ trợ bên ngoài - Không cần cài vào dependency)
+gltf-pipeline: Khi tải model 3D (não bộ, rừng cây) trên mạng về, file thường rất nặng (hàng chục MB). Bạn dùng công cụ này trên terminal để nén file .gltf thành .glb chuẩn nén Draco, giúp web load game trong vài giây.
+
+gltfjsx: Công cụ tuyệt vời của cộng đồng Poimandres. Chạy lệnh npx gltfjsx model.glb, nó sẽ tự động dịch file 3D của bạn thành một Component React chuẩn chỉnh với đầy đủ các mesh đã được định nghĩa sẵn.

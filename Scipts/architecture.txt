@@ -1,0 +1,33 @@
+src/
+│
+├── assets/                 # Chứa tài nguyên tĩnh
+│   ├── models/             # File 3D (.glb, .gltf) - Vd: brain.glb, tree.glb
+│   ├── textures/           # Hình ảnh map cho 3D
+│   └── sounds/             # Âm thanh (click, xèo xèo khi ghép đồ)
+│
+├── components/             # Chứa các component React
+│   ├── 3d/                 # NHÓM 1: Components render trong <Canvas>
+│   │   ├── scenes/         # Các cảnh lớn (Hub, ForestBranch1,...)
+│   │   ├── objects/        # Các vật thể (SignBoard, ItemDrop,...)
+│   │   └── CameraRig.jsx   # Xử lý nội suy đường cong GSAP cho Camera
+│   │
+│   └── ui/                 # NHÓM 2: Components render HTML/CSS (2D)
+│       ├── hud/            # Giao diện cố định (Balo, Progress, Mini-map)
+│       ├── inventory/      # Modal Túi đồ & Bàn Crafting
+│       └── overlays/       # Form câu hỏi đè lên bảng gỗ 3D (<Html>)
+│
+├── data/                   # Thay thế cho Database
+│   └── questions.json      # File lưu 25 câu hỏi bạn vừa chốt
+│
+├── store/                  # NHÓM 3: Quản lý State toàn cục
+│   └── useGameStore.js     # Dùng Zustand để lưu tiến độ, túi đồ, công thức
+│
+├── hooks/                  # Custom hooks để tái sử dụng logic
+│   ├── useCrafting.js      # Logic check công thức ghép đồ
+│   └── useCameraPath.js    # Logic tính toán tọa độ Bezier cho Camera
+│
+├── utils/                  # Các hàm helper tiện ích
+│   └── constants.js        # Chứa ID vật phẩm, tọa độ các Node chốt
+│
+├── App.jsx                 # Chứa <Canvas> bao ngoài và gọi UI 2D lên trên
+└── main.jsx

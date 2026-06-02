@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn 2 — Lượng, Chất & Mâu Thuẫn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --panel-bg: rgba(12, 15, 30, 0.95);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent: #f4c95d;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #141a35 0%, #06070d 55%, #040409 100%);
+            font-family: 'Merriweather', serif;
+            color: #e6edf5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 40px 120px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255,255,255,0.05);
+            border-radius: 24px;
+            overflow: hidden;
+            background: #111;
+            /* Khả năng scale mượt mà */
+            transform-origin: center center;
+        }
+
+        /* --- Bản đồ --- */
+        #world {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-color: #1a1a24;
+            z-index: 1;
+        }
+
+        .entity { 
+            position: absolute; 
+            z-index: 85; 
+            transform: translate(-50%, -50%); 
+            transition: top 0.05s linear, left 0.05s linear;
+        }
+
+        /* --- Nhân vật --- */
+        .char-container {
+            position: relative;
+            width: 40px;
+            height: 60px;
+        }
+
+        .char-name-tag {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 13px;
+            font-weight: bold;
+            color: #f39c12;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.9;
+        }
+
+        /* Player */
+        #player .char-head { position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; background: #f39c12; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; }
+        #player .char-body { position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; background: #2980b9; border: 2px solid #fff; border-radius: 4px; z-index: 10; }
+        #player .char-arm { position: absolute; width: 6px; height: 16px; background: #2980b9; border: 1px solid #fff; border-radius: 3px; top: 2px; }
+        #player .arm-left { left: -7px; transform-origin: top center; }
+        #player .arm-right { right: -7px; transform-origin: top center; }
+        #player .char-leg { position: absolute; width: 8px; height: 14px; background: #1c5982; border: 1px solid #fff; border-radius: 3px; top: 42px; }
+        #player .leg-left { left: 11px; transform-origin: top center; }
+        #player .leg-right { right: 11px; transform-origin: top center; }
+
+        /* NPC Hegel */
+        #hegel .char-head { position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; background: #d4a373; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; }
+        #hegel .char-body { position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; background: #333; border: 2px solid #555; border-radius: 4px; z-index: 10; }
+        #hegel .char-arm { position: absolute; width: 6px; height: 16px; background: #333; border: 1px solid #555; border-radius: 3px; top: 2px; }
+        #hegel .arm-left { left: -7px; transform-origin: top center; }
+        #hegel .arm-right { right: -7px; transform-origin: top center; }
+        #hegel .char-leg { position: absolute; width: 8px; height: 14px; background: #222; border: 1px solid #444; border-radius: 3px; top: 42px; }
+        #hegel .leg-left { left: 11px; transform-origin: top center; }
+        #hegel .leg-right { right: 11px; transform-origin: top center; }
+        .hair-hegel { position: absolute; top: 0; left: 8px; width: 24px; height: 18px; background: #555; border-radius: 50% 50% 0 0; z-index: 14; }
+
+        .walking .leg-left { animation: leg-swing 0.4s infinite alternate; }
+        .walking .leg-right { animation: leg-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-left { animation: arm-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-right { animation: arm-swing 0.4s infinite alternate; }
+
+        @keyframes leg-swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+        @keyframes arm-swing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+
+        /* --- Objects --- */
+        .energy-block {
+            width: 24px; height: 24px;
+            background: #00f2fe;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #00f2fe;
+            animation: float 2s infinite alternate ease-in-out;
+        }
+
+        .machine {
+            width: 80px; height: 100px;
+            background: linear-gradient(to bottom, #2b5876, #4e4376);
+            border: 3px solid #111;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 10px;
+        }
+        .machine-screen {
+            width: 60px; height: 30px; background: #000; border: 2px solid #333; margin-bottom: 10px; border-radius: 4px;
+            display: flex; justify-content: center; align-items: center; color: #0f0; font-family: monospace; font-weight: bold;
+        }
+        .machine-bar-container {
+            width: 60px; height: 10px; background: #222; border: 1px solid #000; border-radius: 5px; overflow: hidden;
+        }
+        .machine-bar { width: 0%; height: 100%; background: #00f2fe; transition: width 0.5s ease; }
+
+        .pedestal { width: 50px; height: 50px; background: #444; border: 3px solid #222; border-radius: 4px; position: relative; }
+        .pedestal-ring { position: absolute; top: -10px; left: -10px; width: 70px; height: 70px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 50%; animation: spin 10s linear infinite; }
+        
+        .orb {
+            width: 24px; height: 24px; border-radius: 50%;
+            position: absolute; top: -30px; left: 10px;
+            box-shadow: 0 0 20px currentColor;
+            animation: float 2s infinite alternate ease-in-out;
+        }
+        .white-orb { color: #fff; background: #fff; }
+        .black-orb { color: #8a2be2; background: #111; border: 2px solid #8a2be2; box-shadow: 0 0 20px #8a2be2; }
+        
+        .key-obj {
+            width: 30px; height: 15px; background: gold; border-radius: 2px;
+            position: absolute; top: -20px; left: 7px;
+            box-shadow: 0 0 15px gold;
+        }
+
+        @keyframes float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Cửa Thoát */
+        #exit-door {
+            position: absolute;
+            width: 140px; height: 60px;
+            background: linear-gradient(to bottom, #1a1a1a, #000);
+            border: 4px solid #333;
+            border-bottom: none;
+            left: 400px; top: 0;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex; justify-content: center; align-items: center;
+            color: #555; font-weight: bold; font-family: 'Unbounded', sans-serif;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            transition: all 0.5s;
+        }
+        #exit-door.unlocked {
+            border-color: #f1d07a;
+            color: #f1d07a;
+            box-shadow: 0 0 40px rgba(241, 208, 122, 0.4);
+        }
+        .door-lock-container { 
+            position: absolute; right: -45px; top: 12px; font-size: 32px; 
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+            z-index: 21;
+        }
+
+        /* --- UI Overlay --- */
+        #interact-prompt { 
+            position: absolute; background: linear-gradient(135deg, #f1d07a, #d6b25e); color: #1b1b24; font-weight: bold; 
+            padding: 4px 12px; border: 1px solid rgba(0,0,0,0.35); border-radius: 999px; 
+            font-size: 13px; z-index: 200; pointer-events: none; display: none; animation: bounce 1s infinite; 
+            transform: translate(-50%, -100%);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        }
+        @keyframes bounce { 0%, 100% { transform: translate(-50%, -10px); } 50% { transform: translate(-50%, -15px); } }
+        
+        .ui-panel { 
+            position: absolute; background: var(--panel-bg); border: 1px solid var(--panel-border); 
+            padding: 24px; z-index: 1000; pointer-events: auto; border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+        }
+        
+        #flash-msg { 
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%); 
+            background: rgba(214, 178, 94, 0.95); color: #1b1b24;
+            padding: 12px 36px; border-radius: 999px; 
+            z-index: 2000; font-weight: bold; display: none; font-size: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+            font-family: 'Unbounded', sans-serif;
+            letter-spacing: 0.05em; text-transform: uppercase;
+        }
+
+        #run-timer {
+            position: absolute; top: 16px; left: 16px; z-index: 2100;
+            background: rgba(12, 14, 22, 0.9); color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35); padding: 8px 14px; border-radius: 12px;
+            font-family: 'Unbounded', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        #inv-button {
+            position: absolute; top: 16px; right: 16px; z-index: 2100;
+            background: rgba(12, 14, 22, 0.9); color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35); padding: 8px 14px; border-radius: 12px;
+            font-family: 'Unbounded', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+        #inv-button:hover { background: rgba(214, 178, 94, 0.15); }
+        
+        /* Inventory List */
+        .inv-item-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s; border-radius: 8px; margin-bottom: 4px; }
+        .inv-item-row.selected { background: rgba(214, 178, 94, 0.15); border-left: 4px solid #d6b25e; }
+        .inv-item-row.held { background: rgba(52, 152, 219, 0.2); }
+        .inv-icon { font-size: 28px; width: 44px; text-align: center; margin-right: 12px; }
+        .inv-info { flex: 1; }
+        .inv-name { font-weight: bold; font-size: 16px; color: #f1d07a; }
+        .inv-desc { font-size: 13px; color: #9aa3b2; font-style: italic; margin-top: 4px; }
+
+        /* End Screen */
+        #game-over-screen {
+            position: absolute; inset: 0; background: rgba(4, 6, 12, 0.96);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .end-panel {
+            width: min(700px, 90%); padding: 40px; border-radius: 24px;
+            background: rgba(8, 10, 16, 0.92); border: 1px solid rgba(214, 178, 94, 0.25);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6); text-align: center;
+        }
+        #end-title { font-size: 42px; font-family: 'Unbounded', sans-serif; font-weight: 800; color: #f1d07a; margin-bottom: 20px; }
+        #end-msg { font-size: 18px; color: #9aa3b2; font-style: italic; line-height: 1.6; margin-bottom: 30px; }
+        #end-hint { font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: #6b7280; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="world">
+        <!-- Thực thể -->
+        <div id="exit-door" class="entity">LỐI THOÁT<div class="door-lock-container" id="door-lock-ui">🔒</div></div>
+
+        <div id="hegel" class="entity" style="left: 400px; top: 250px;">
+            <div class="char-name-tag">Hegel</div>
+            <div class="char-container">
+                <div class="hair-hegel"></div><div class="char-head"></div>
+                <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+
+        <!-- Máy năng lượng -->
+        <div id="machine" class="entity machine" style="left: 150px; top: 400px;">
+            <div class="machine-screen" id="machine-screen">0%</div>
+            <div class="machine-bar-container"><div class="machine-bar" id="machine-bar"></div></div>
+        </div>
+
+        <!-- Khối năng lượng rải rác -->
+        <div id="energy-1" class="entity energy-block" style="left: 100px; top: 150px;"></div>
+        <div id="energy-2" class="entity energy-block" style="left: 650px; top: 100px;"></div>
+        <div id="energy-3" class="entity energy-block" style="left: 700px; top: 500px;"></div>
+
+        <!-- Quả cầu đen (ẩn lúc đầu, xuất hiện sau góc khuất hoặc nằm ở rìa) -->
+        <div id="orb-black-pickup" class="entity" style="left: 100px; top: 500px;">
+            <div class="orb black-orb" style="top: 0; left: 0; position: relative;"></div>
+        </div>
+
+        <!-- Bệ dung hợp -->
+        <div id="fusion-pedestal" class="entity pedestal" style="left: 650px; top: 300px;">
+            <div class="pedestal-ring"></div>
+        </div>
+
+        <div id="player" class="entity" style="left: 400px; top: 450px; z-index: 90;">
+            <div class="char-name-tag">Lữ Khách</div>
+            <div id="player-sprite" class="char-container">
+                <div class="char-head"></div>
+                <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="interact-prompt">F</div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" style="z-index: 2000; position: absolute; inset: 0; pointer-events: none;">
+        <div id="run-timer">00:00</div>
+        <div id="flash-msg">THÔNG BÁO</div>
+        <button id="inv-button" type="button" style="pointer-events: auto;">Hành Trang [I]</button>
+        
+        <div id="dialog-box" class="ui-panel bottom-10 left-1/2 -translate-x-1/2 w-[90%] hidden">
+            <div id="dialog-name" class="font-bold text-orange-400 mb-2 text-2xl uppercase font-['Unbounded'] tracking-wide">...</div>
+            <div id="dialog-text" class="text-gray-200 italic text-xl leading-relaxed">...</div>
+            <div class="text-sm text-gray-500 mt-6 uppercase text-center font-bold tracking-widest">Nhấn [F] để tiếp tục</div>
+        </div>
+        
+        <div id="inventory-ui" class="ui-panel top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] hidden">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-3 text-center uppercase font-['Unbounded'] text-[#f1d07a]">Túi Đồ</h2>
+            <div id="inventory-slots" class="flex flex-col mb-4 max-h-[300px] overflow-y-auto pr-2"></div>
+            <div class="text-xs text-gray-400 uppercase font-bold tracking-widest text-center mt-2">W/S: Chọn | F: Dùng/Cầm | I: Đóng</div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <div class="end-panel">
+                <h1 id="end-title">BIỆN CHỨNG</h1>
+                <p id="end-msg">Mâu thuẫn không phải là sự bế tắc, mà là động lực của sự phát triển. Thông qua việc tích lũy về lượng và dung hợp hai mặt đối lập, bạn đã tìm ra chìa khóa của sự thật.</p>
+                <div id="end-hint">Ấn phím [F] để qua màn tiếp theo</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Responsive scaling
+    function resizeGame() {
+        const wrapper = document.getElementById('game-wrapper');
+        const scale = Math.min(window.innerWidth / 850, window.innerHeight / 650);
+        wrapper.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resizeGame);
+    resizeGame();
+
+    const progress = Number(localStorage.getItem('mln11Progress') || '0');
+    if (progress < 1) window.location.href = 'index.html';
+
+    const CONFIG = { speed: 4, interactDist: 70 };
+    let flashTimeout;
+
+    const STATE = {
+        player: { x: 400, y: 450 },
+        gameState: 'PLAYING',
+        inventory: [],
+        selectedItemIndex: -1, 
+        previewItemIndex: -1,
+        dialogIndex: 0,
+        flags: { 
+            energyCollected: 0,
+            energyInMachine: 0,
+            machineJumped: false,
+            hasDarkOrb: false,
+            fusionDone: false,
+            doorUnlocked: false,
+            win: false
+        },
+        interactables: [
+            { id: 'hegel', x: 400, y: 250, w: 40, h: 60, type: 'npc' },
+            { id: 'machine', x: 150, y: 400, w: 80, h: 100, type: 'machine' },
+            { id: 'energy-1', x: 100, y: 150, w: 30, h: 30, type: 'energy' },
+            { id: 'energy-2', x: 650, y: 100, w: 30, h: 30, type: 'energy' },
+            { id: 'energy-3', x: 700, y: 500, w: 30, h: 30, type: 'energy' },
+            { id: 'orb-black', x: 100, y: 500, w: 30, h: 30, type: 'dark_orb' },
+            { id: 'fusion', x: 650, y: 300, w: 50, h: 50, type: 'fusion' },
+            { id: 'door', x: 400, y: 30, w: 140, h: 60, type: 'door' }
+        ]
+    };
+
+    const keys = {};
+    const dialoguesHegel = [
+        "Sự phát triển luôn bắt đầu từ việc tích lũy dần dần về Lượng.",
+        "Hãy chú ý đến giới hạn (Độ). Chỉ khi vượt qua Điểm nút, sự vật mới tạo ra bước nhảy về Chất.",
+        "Nhưng thế vẫn chưa đủ. Các mặt đối lập không tồn tại cô lập.",
+        "Chúng vừa thống nhất vừa đấu tranh với nhau. Đó mới là nguồn gốc thực sự của sự vận động."
+    ];
+
+    let playerSpriteEl, spotlightEl;
+
+    function applyPlayerName() {
+        const name = localStorage.getItem('mln11PlayerName');
+        if (name) document.querySelector('#player .char-name-tag').textContent = name;
+    }
+
+    function startRunTimer() {
+        const timerEl = document.getElementById('run-timer');
+        let start = Number(localStorage.getItem('mln11RunStart') || '0');
+        if (!start) { start = Date.now(); localStorage.setItem('mln11RunStart', start); }
+        setInterval(() => {
+            const elapsed = Math.max(0, Date.now() - start);
+            const totalSec = Math.floor(elapsed / 1000);
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function init() {
+        playerSpriteEl = document.getElementById('player-sprite');
+        applyPlayerName();
+        startRunTimer();
+
+        document.getElementById('inv-button').addEventListener('click', () => {
+            if (STATE.gameState === 'PLAYING') openInventory();
+            else if (STATE.gameState === 'INVENTORY') closeInventory();
+        });
+
+        window.addEventListener('keydown', e => { 
+            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+            keys[e.code] = true; 
+            handleInput(e); 
+        });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+        requestAnimationFrame(gameLoop);
+    }
+
+    function handleInput(e) {
+        if (STATE.gameState === 'GAMEOVER') {
+            if (e.code === 'KeyF' && STATE.flags.win) {
+                localStorage.setItem('mln11Progress', '2');
+                window.location.href = 'level3.html';
+            }
+            return;
+        }
+
+        if (e.code === 'KeyF') {
+            if (STATE.gameState === 'PLAYING') interact();
+            else if (STATE.gameState === 'DIALOG') nextDialog();
+            else if (STATE.gameState === 'INVENTORY') useEquipItem();
+        }
+        if (e.code === 'KeyI' && STATE.gameState !== 'DIALOG') {
+            if (STATE.gameState === 'PLAYING') openInventory();
+            else closeInventory();
+        }
+        if (STATE.gameState === 'INVENTORY') {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') { STATE.previewItemIndex = Math.max(0, STATE.previewItemIndex - 1); updateInventoryUI(); }
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') { STATE.previewItemIndex = Math.min(STATE.inventory.length - 1, STATE.previewItemIndex + 1); updateInventoryUI(); }
+        }
+        if (e.code === 'Escape') { 
+            closeInventory(); 
+            STATE.gameState = 'PLAYING'; 
+        }
+    }
+
+    function interact() {
+        const p = STATE.player;
+        let interacted = false;
+
+        STATE.interactables.forEach(obj => {
+            if (interacted) return;
+            const d = dist(p.x, p.y, obj.x, obj.y);
+            
+            // Check interaction distance depending on object type
+            let checkDist = CONFIG.interactDist;
+            if (obj.type === 'door') checkDist = 80;
+
+            if (d < checkDist) {
+                interacted = true;
+                if (obj.type === 'npc') {
+                    STATE.gameState = 'DIALOG'; STATE.dialogIndex = 0;
+                    document.getElementById('dialog-box').classList.remove('hidden');
+                    document.getElementById('dialog-name').textContent = "Hegel";
+                    document.getElementById('dialog-text').textContent = dialoguesHegel[0];
+                }
+                else if (obj.type === 'energy') {
+                    if (document.getElementById(obj.id).style.display !== 'none') {
+                        document.getElementById(obj.id).style.display = 'none';
+                        STATE.inventory.push({ id: 'energy_block', name: 'Khối năng lượng', icon: '🔋', type: 'equip', desc: 'Sự tích lũy về lượng.' });
+                        showFlash("ĐÃ NHẶT: KHỐI NĂNG LƯỢNG");
+                    }
+                }
+                else if (obj.type === 'dark_orb') {
+                    if (!STATE.flags.hasDarkOrb) {
+                        STATE.flags.hasDarkOrb = true;
+                        document.getElementById('orb-black-pickup').style.display = 'none';
+                        STATE.inventory.push({ id: 'orb_black', name: 'Quả cầu Bóng tối', icon: '🔮', type: 'equip', desc: 'Mặt đối lập của ánh sáng.' });
+                        showFlash("ĐÃ NHẶT: QUẢ CẦU BÓNG TỐI");
+                    }
+                }
+                else if (obj.type === 'machine') {
+                    handleMachine();
+                }
+                else if (obj.type === 'fusion') {
+                    handleFusion();
+                }
+                else if (obj.type === 'door') {
+                    if (STATE.flags.doorUnlocked) {
+                        showFlash("Cửa đã mở! Chân lý đang chờ phía trước.");
+                        finishGame(true);
+                    } else {
+                        const held = STATE.inventory[STATE.selectedItemIndex];
+                        if (held && held.id === 'key_dialect') {
+                            STATE.flags.doorUnlocked = true;
+                            document.getElementById('door-lock-ui').textContent = "🔓";
+                            document.getElementById('exit-door').classList.add('unlocked');
+                            showFlash("Cửa đã được mở khóa bằng Chìa khóa Biện chứng!");
+                            STATE.inventory.splice(STATE.selectedItemIndex, 1);
+                            STATE.selectedItemIndex = -1;
+                        } else {
+                            showFlash("Cửa đang khóa. Yêu cầu sự thống nhất của các mặt đối lập.");
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function handleMachine() {
+        if (STATE.flags.machineJumped) {
+            showFlash("Cỗ máy đã hoàn tất bước nhảy về Chất.");
+            return;
+        }
+
+        const held = STATE.inventory[STATE.selectedItemIndex];
+        if (held && held.id === 'energy_block') {
+            STATE.flags.energyInMachine++;
+            STATE.inventory.splice(STATE.selectedItemIndex, 1);
+            STATE.selectedItemIndex = -1;
+            
+            const pct = Math.floor((STATE.flags.energyInMachine / 3) * 100);
+            document.getElementById('machine-screen').textContent = `${pct}%`;
+            document.getElementById('machine-bar').style.width = `${pct}%`;
+
+            if (STATE.flags.energyInMachine < 3) {
+                showFlash(`Đang trong giới hạn Độ (${pct}%). Chưa có sự thay đổi về Chất.`);
+            } else {
+                STATE.flags.machineJumped = true;
+                showFlash("Đạt ĐIỂM NÚT! Bước nhảy xảy ra!");
+                document.getElementById('machine-screen').textContent = "MAX";
+                document.getElementById('machine-screen').style.color = "#fff";
+                document.getElementById('machine-screen').style.background = "#00f2fe";
+                
+                // Spawn Light Orb
+                STATE.inventory.push({ id: 'orb_white', name: 'Quả cầu Ánh sáng', icon: '✨', type: 'equip', desc: 'Sinh ra từ bước nhảy về Chất.' });
+                setTimeout(() => showFlash("Cỗ máy sinh ra QUẢ CẦU ÁNH SÁNG! (Đã thêm vào Hành trang)"), 3000);
+            }
+        } else {
+            showFlash("Cỗ máy cần nạp Khối Năng Lượng (Hãy trang bị trên tay).");
+        }
+    }
+
+    function handleFusion() {
+        if (STATE.flags.fusionDone) {
+            showFlash("Sự dung hợp đã hoàn tất.");
+            return;
+        }
+        
+        // Kiểm tra xem người chơi có cả 2 quả cầu không (1 cầm tay, 1 trong túi hoặc cầm 1 trong 2)
+        const hasWhite = STATE.inventory.some(i => i.id === 'orb_white');
+        const hasBlack = STATE.inventory.some(i => i.id === 'orb_black');
+        
+        if (hasWhite && hasBlack) {
+            STATE.flags.fusionDone = true;
+            STATE.inventory = STATE.inventory.filter(i => i.id !== 'orb_white' && i.id !== 'orb_black');
+            STATE.selectedItemIndex = -1;
+            
+            // Visual effect on pedestal
+            document.getElementById('fusion-pedestal').innerHTML += `<div class="key-obj"></div>`;
+            
+            showFlash("Ánh sáng và Bóng tối thống nhất và đấu tranh...");
+            setTimeout(() => {
+                showFlash("Vụ nổ biện chứng tạo ra CHÌA KHÓA BIỆN CHỨNG!");
+                STATE.inventory.push({ id: 'key_dialect', name: 'Chìa khóa Biện chứng', icon: '🗝️', type: 'equip', desc: 'Thành quả của việc giải quyết mâu thuẫn.' });
+                document.getElementById('fusion-pedestal').innerHTML = `<div class="pedestal-ring"></div>`; // remove key visual
+            }, 2500);
+        } else {
+            showFlash("Bệ dung hợp yêu cầu hai mặt đối lập: Ánh sáng và Bóng tối.");
+        }
+    }
+
+    function openInventory() { 
+        STATE.gameState = 'INVENTORY'; 
+        if(STATE.previewItemIndex === -1 && STATE.inventory.length > 0) STATE.previewItemIndex = 0; 
+        document.getElementById('inventory-ui').classList.remove('hidden'); 
+        updateInventoryUI(); 
+    }
+    
+    function closeInventory() { 
+        STATE.gameState = 'PLAYING'; 
+        document.getElementById('inventory-ui').classList.add('hidden'); 
+    }
+    
+    function useEquipItem() {
+        const it = STATE.inventory[STATE.previewItemIndex];
+        if(!it) return;
+        if(it.type === 'equip') {
+            STATE.selectedItemIndex = STATE.previewItemIndex;
+            showFlash(`ĐANG TRANG BỊ: ${it.name.toUpperCase()}`);
+            closeInventory();
+        }
+    }
+
+    function nextDialog() {
+        STATE.dialogIndex++;
+        if (STATE.dialogIndex >= dialoguesHegel.length) { 
+            STATE.gameState = 'PLAYING'; 
+            document.getElementById('dialog-box').classList.add('hidden'); 
+        } else {
+            document.getElementById('dialog-text').textContent = dialoguesHegel[STATE.dialogIndex];
+        }
+    }
+
+    function updateInventoryUI() {
+        const invSlots = document.getElementById('inventory-slots');
+        invSlots.innerHTML = STATE.inventory.length ? '' : '<p class="text-center text-gray-500 py-6 italic">Hành trang trống</p>';
+        STATE.inventory.forEach((it, i) => { 
+            const isPrev = i === STATE.previewItemIndex;
+            const isHeld = i === STATE.selectedItemIndex; 
+            invSlots.innerHTML += `
+            <div class="inv-item-row ${isPrev?'selected':''} ${isHeld?'held':''}">
+                <div class="inv-icon">${it.icon}</div>
+                <div class="inv-info">
+                    <div class="inv-name">${it.name} ${isHeld ? '<span class="text-blue-400 text-xs ml-2">[Đang cầm]</span>' : ''}</div>
+                    <div class="inv-desc">${it.desc}</div>
+                </div>
+            </div>`; 
+        });
+    }
+
+    function showFlash(txt) {
+        const fMsg = document.getElementById('flash-msg');
+        fMsg.textContent = txt; 
+        fMsg.style.display = 'block';
+        if (flashTimeout) clearTimeout(flashTimeout);
+        flashTimeout = setTimeout(() => { fMsg.style.display = 'none'; }, 3500);
+    }
+    
+    function dist(x1, y1, x2, y2) { return Math.sqrt((x1-x2)**2 + (y1-y2)**2); }
+
+    function isColliding(nX, nY) {
+        if (nX < 20 || nX > 780 || nY < 60 || nY > 580) return true;
+        // Collision with Hegel, Machine, Fusion
+        for (let obj of STATE.interactables) {
+            if (['npc', 'machine', 'fusion'].includes(obj.type)) {
+                const left = obj.x - obj.w/2 - 15;
+                const right = obj.x + obj.w/2 + 15;
+                const top = obj.y - obj.h/2 - 15;
+                const bottom = obj.y + obj.h/2 + 15;
+                if (nX > left && nX < right && nY > top && nY < bottom) return true;
+            }
+        }
+        return false;
+    }
+
+    function finishGame(win) {
+        STATE.gameState = 'GAMEOVER'; 
+        document.getElementById('game-over-screen').classList.remove('hidden');
+        STATE.flags.win = win;
+    }
+
+    function gameLoop() {
+        if (STATE.gameState === 'PLAYING') {
+            let dx = 0, dy = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= CONFIG.speed; 
+            if (keys['KeyS'] || keys['ArrowDown']) dy += CONFIG.speed;
+            if (keys['KeyA'] || keys['ArrowLeft']) { dx -= CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(-1)'; }
+            if (keys['KeyD'] || keys['ArrowRight']) { dx += CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(1)'; }
+            
+            if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // normalize diagonal
+
+            const nX = STATE.player.x + dx; const nY = STATE.player.y + dy;
+            if (!isColliding(nX, nY)) { 
+                STATE.player.x = nX; 
+                STATE.player.y = nY; 
+            }
+            
+            if (dx !== 0 || dy !== 0) playerSpriteEl.classList.add('walking'); 
+            else playerSpriteEl.classList.remove('walking');
+
+            document.getElementById('player').style.left = STATE.player.x + 'px';
+            document.getElementById('player').style.top = STATE.player.y + 'px';
+
+            // Interact prompt logic
+            let showPrompt = false;
+            let pX = 0, pY = 0;
+            for (let obj of STATE.interactables) {
+                // Ignore picked up items
+                if (['energy', 'dark_orb'].includes(obj.type) && document.getElementById(obj.id) && document.getElementById(obj.id).style.display === 'none') continue;
+                
+                let checkDist = CONFIG.interactDist;
+                if (obj.type === 'door') checkDist = 80;
+
+                if (dist(STATE.player.x, STATE.player.y, obj.x, obj.y) < checkDist) {
+                    showPrompt = true; pX = obj.x; pY = obj.y - obj.h/2 - 10;
+                    break;
+                }
+            }
+            const prompt = document.getElementById('interact-prompt');
+            if (showPrompt) {
+                prompt.style.display = 'block';
+                prompt.style.left = pX + 'px';
+                prompt.style.top = pY + 'px';
+            } else {
+                prompt.style.display = 'none';
+            }
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    init();
+</script>
+
+</body>
+</html>

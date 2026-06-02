@@ -185,7 +185,7 @@ const HubPortals = () => {
     <group>
       <Portal position={[-16, 0, 0]} color="#94a3b8" branchId={1} name="Nhánh 1: Tinh hệ Bạc" requiredItems="Mở sẵn" />
       <Portal position={[-6, 0, -8]} color="#3b82f6" branchId={2} name="Nhánh 2: Tinh hệ Lam" requiredItems="Chìa khóa Nhãn quan" />
-      <Portal position={[6, 0, -8]} color="#eab308" branchId={3} name="Nhánh 3: Tinh hệ Vàng" requiredItems="Chìa khóa Bước nhảy" />
+      <Portal position={[6, 0, -8]} color="#eab308" branchId={3} name="Nhánh 3: Tinh hệ Vàng" requiredItems="Huy hiệu Biện Chứng" />
       <Portal position={[16, 0, 0]} color="#ffffff" branchId="BOSS" name="Kho tàng Tối thượng" requiredItems="Chìa khóa Bánh xe Lịch sử" />
     </group>
   );

@@ -4,6 +4,8 @@ import MainCanvas from './components/3d/MainCanvas';
 import QuestionOverlay from './components/ui/QuestionOverlay';
 import RewardOverlay from './components/ui/RewardOverlay';
 import GateGuardianModal from './components/ui/GateGuardianModal';
+import Level2Minigame from './components/2d/Level2Minigame';
+import Level3Minigame from './components/2d/Level3Minigame';
 import { useGameStore } from './store/useGameStore';
 import { Button } from 'react-bootstrap';
 
@@ -30,6 +32,8 @@ class ErrorBoundary extends React.Component {
 
 function App() {
   const addItem = useGameStore((state) => state.addItem);
+  const viewState = useGameStore((state) => state.viewState);
+  const currentBranch = useGameStore((state) => state.currentBranch);
 
   const giveTestItems = () => {
     addItem({ id: 'stone', name: 'Khối đá nguyên thủy', icon: '🪨' });
@@ -69,7 +73,13 @@ function App() {
           </p>
         </div>
         
-
+        {viewState === 'BRANCH' && currentBranch === 2 && (
+          <Level2Minigame />
+        )}
+        
+        {viewState === 'BRANCH' && currentBranch === 3 && (
+          <Level3Minigame />
+        )}
 
       </div>
     </>

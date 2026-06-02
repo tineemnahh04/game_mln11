@@ -59,14 +59,14 @@ export const useGameStore = create((set, get) => ({
   hasKeyForBranch: (branchId) => {
     const { inventory } = get();
     if (branchId === 2) return inventory.some(i => i.id === 'key_branch_2');
-    if (branchId === 3) return inventory.some(i => i.id === 'key_branch_3');
+    if (branchId === 3) return inventory.some(i => i.id === 'badge2');
     if (branchId === 'BOSS') return inventory.some(i => i.id === 'key_boss');
     return true;
   },
 
   consumeKeyAndUnlock: (branchId) => {
     const { inventory, unlockedPortals } = get();
-    const keyMap = { 2: 'key_branch_2', 3: 'key_branch_3', 'BOSS': 'key_boss' };
+    const keyMap = { 2: 'key_branch_2', 3: 'badge2', 'BOSS': 'key_boss' };
     const keyId = keyMap[branchId];
     
     set((state) => {

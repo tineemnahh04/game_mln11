@@ -9,8 +9,9 @@ const RewardOverlay = () => {
   const handleCollectItem = () => {
     if (rewardPopup) {
       addItem(rewardPopup);
+      const targetState = rewardPopup.targetViewState || 'BRANCH';
       setRewardPopup(null);
-      setViewState('BRANCH'); // Return to the branch
+      setViewState(targetState); // Return to the target state
     }
   };
 

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn 3 — Cơ sở hạ tầng & Bản chất Hiện tượng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --panel-bg: rgba(12, 15, 30, 0.95);
+            --panel-border: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #2c1616 0%, #110808 55%, #000000 100%);
+            font-family: 'Merriweather', serif;
+            color: #e6edf5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 40px 120px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255,255,255,0.05);
+            border-radius: 24px;
+            overflow: hidden;
+            background: #111;
+            transform-origin: center center;
+        }
+
+        /* --- Bản đồ --- */
+        #world {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-color: #1c151c;
+            z-index: 1;
+        }
+
+        .entity { 
+            position: absolute; 
+            z-index: 85; 
+            transform: translate(-50%, -50%); 
+            transition: top 0.05s linear, left 0.05s linear;
+        }
+
+        /* Vực thẳm */
+        #abyss {
+            position: absolute;
+            left: 350px; top: 0;
+            width: 100px; height: 600px;
+            background: #050505;
+            box-shadow: inset 10px 0 20px #000, inset -10px 0 20px #000;
+            z-index: 5;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #abyss::before {
+            content: '';
+            position: absolute; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,0,0,0.8) 40px, rgba(0,0,0,0.8) 80px);
+        }
+        
+        .bridge {
+            position: absolute;
+            width: 100px; height: 80px;
+            background: transparent;
+            z-index: 6;
+            transition: all 1s;
+            opacity: 0;
+        }
+        .bridge.wood {
+            background: #5d4037; border-top: 4px solid #3e2723; border-bottom: 4px solid #3e2723;
+            opacity: 1; transform: scaleY(0.1);
+        }
+        .bridge.steel {
+            background: repeating-linear-gradient(90deg, #555, #555 10px, #333 10px, #333 20px);
+            border-top: 5px solid #888; border-bottom: 5px solid #888; box-shadow: 0 0 20px rgba(136,136,136,0.5);
+            opacity: 1; transform: scaleY(1);
+        }
+
+        /* --- Nhân vật --- */
+        .char-container { position: relative; width: 40px; height: 60px; }
+        .char-name-tag {
+            position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 13px; font-weight: bold; color: #f39c12;
+            text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 100;
+        }
+
+        #player .char-head { position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; background: #f39c12; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; }
+        #player .char-body { position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; background: #2980b9; border: 2px solid #fff; border-radius: 4px; z-index: 10; }
+        #player .char-arm { position: absolute; width: 6px; height: 16px; background: #2980b9; border: 1px solid #fff; border-radius: 3px; top: 2px; }
+        #player .arm-left { left: -7px; transform-origin: top center; }
+        #player .arm-right { right: -7px; transform-origin: top center; }
+        #player .char-leg { position: absolute; width: 8px; height: 14px; background: #1c5982; border: 1px solid #fff; border-radius: 3px; top: 42px; }
+        #player .leg-left { left: 11px; transform-origin: top center; }
+        #player .leg-right { right: 11px; transform-origin: top center; }
+
+        /* NPC Marx */
+        #marx .char-head { position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; background: #d4a373; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; }
+        #marx .char-body { position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; background: #222; border: 2px solid #444; border-radius: 4px; z-index: 10; }
+        #marx .char-arm { position: absolute; width: 6px; height: 16px; background: #222; border: 1px solid #444; border-radius: 3px; top: 2px; }
+        #marx .arm-left { left: -7px; transform-origin: top center; }
+        #marx .arm-right { right: -7px; transform-origin: top center; }
+        #marx .char-leg { position: absolute; width: 8px; height: 14px; background: #111; border: 1px solid #333; border-radius: 3px; top: 42px; }
+        #marx .leg-left { left: 11px; transform-origin: top center; }
+        #marx .leg-right { right: 11px; transform-origin: top center; }
+        .hair-marx { position: absolute; top: -2px; left: 6px; width: 28px; height: 22px; background: #ccc; border-radius: 5px; z-index: 14; }
+        .beard-marx { position: absolute; top: 12px; left: 8px; width: 24px; height: 15px; background: #ccc; border-radius: 0 0 10px 10px; z-index: 16; }
+
+        .walking .leg-left { animation: leg-swing 0.4s infinite alternate; }
+        .walking .leg-right { animation: leg-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-left { animation: arm-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-right { animation: arm-swing 0.4s infinite alternate; }
+        @keyframes leg-swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+        @keyframes arm-swing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+
+        /* Objects */
+        .machine-part { width: 30px; height: 30px; background: #e74c3c; border: 2px solid #c0392b; border-radius: 5px; box-shadow: 0 0 10px #e74c3c; animation: float 2s infinite alternate ease-in-out; }
+        .blueprint { width: 30px; height: 25px; background: #3498db; border: 2px solid #2980b9; border-radius: 2px; box-shadow: 0 0 10px #3498db; animation: float 2.5s infinite alternate ease-in-out; }
+        .blueprint-wood { background: #d35400; border-color: #a04000; box-shadow: 0 0 10px #d35400; }
+        
+        .hammer-obj { width: 35px; height: 20px; background: #7f8c8d; border-radius: 4px; border: 2px solid #2c3e50; position: relative; animation: float 1.8s infinite alternate ease-in-out; }
+        .hammer-obj::after { content: ''; position: absolute; width: 6px; height: 20px; background: #8e44ad; top: 18px; left: 14px; border-radius: 2px; }
+
+        /* Lửa và Quái vật bóng râm */
+        .fire-pit { width: 40px; height: 40px; background: radial-gradient(circle, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); border-radius: 50%; box-shadow: 0 0 30px #ff9a9e; animation: flicker 0.5s infinite alternate; position: relative; }
+        .mini-statue { position: absolute; top: -10px; left: 10px; width: 20px; height: 30px; background: #000; border-radius: 4px; }
+        @keyframes flicker { from { opacity: 0.8; transform: scale(0.95); } to { opacity: 1; transform: scale(1.05); } }
+
+        .shadow-monster {
+            position: absolute; left: 600px; top: 100px; width: 200px; height: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            z-index: 19; pointer-events: none;
+            transition: opacity 1s ease;
+        }
+
+        @keyframes float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+
+        /* Cửa Thoát */
+        #exit-door {
+            position: absolute;
+            width: 140px; height: 60px;
+            background: linear-gradient(to bottom, #111, #000);
+            border: 4px solid #444; border-bottom: none;
+            left: 700px; top: 0; transform: translateX(-50%);
+            z-index: 20; display: flex; justify-content: center; align-items: center;
+            color: #555; font-weight: bold; font-family: 'Unbounded', sans-serif;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); transition: all 0.5s;
+        }
+        #exit-door.unlocked { border-color: #8bd3ff; color: #8bd3ff; box-shadow: 0 0 40px rgba(139, 211, 255, 0.4); }
+
+        /* --- UI Overlay --- */
+        #interact-prompt { 
+            position: absolute; background: linear-gradient(135deg, #f1d07a, #d6b25e); color: #1b1b24; font-weight: bold; 
+            padding: 4px 12px; border: 1px solid rgba(0,0,0,0.35); border-radius: 999px; 
+            font-size: 13px; z-index: 200; pointer-events: none; display: none; animation: bounce 1s infinite; 
+            transform: translate(-50%, -100%); box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        }
+        @keyframes bounce { 0%, 100% { transform: translate(-50%, -10px); } 50% { transform: translate(-50%, -15px); } }
+        
+        .ui-panel { 
+            position: absolute; background: var(--panel-bg); border: 1px solid var(--panel-border); 
+            padding: 24px; z-index: 1000; pointer-events: auto; border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+        }
+        
+        #flash-msg { 
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%); 
+            background: rgba(214, 178, 94, 0.95); color: #1b1b24; padding: 12px 36px; border-radius: 999px; 
+            z-index: 2000; font-weight: bold; display: none; font-size: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+            font-family: 'Unbounded', sans-serif; letter-spacing: 0.05em; text-transform: uppercase; text-align: center;
+        }
+
+        #run-timer {
+            position: absolute; top: 16px; left: 16px; z-index: 2100;
+            background: rgba(12, 14, 22, 0.9); color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35); padding: 8px 14px; border-radius: 12px;
+            font-family: 'Unbounded', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        #inv-button {
+            position: absolute; top: 16px; right: 16px; z-index: 2100;
+            background: rgba(12, 14, 22, 0.9); color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35); padding: 8px 14px; border-radius: 12px;
+            font-family: 'Unbounded', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.3); transition: all 0.2s;
+        }
+        #inv-button:hover { background: rgba(214, 178, 94, 0.15); }
+
+        .inv-item-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s; border-radius: 8px; margin-bottom: 4px; }
+        .inv-item-row.selected { background: rgba(214, 178, 94, 0.15); border-left: 4px solid #d6b25e; }
+        .inv-item-row.held { background: rgba(52, 152, 219, 0.2); }
+        .inv-icon { font-size: 28px; width: 44px; text-align: center; margin-right: 12px; }
+        .inv-info { flex: 1; }
+        .inv-name { font-weight: bold; font-size: 16px; color: #f1d07a; }
+        .inv-desc { font-size: 13px; color: #9aa3b2; font-style: italic; margin-top: 4px; }
+
+        #game-over-screen {
+            position: absolute; inset: 0; background: rgba(4, 6, 12, 0.96);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .end-panel { width: min(700px, 90%); padding: 40px; border-radius: 24px; background: rgba(8, 10, 16, 0.92); border: 1px solid rgba(214, 178, 94, 0.25); box-shadow: 0 30px 80px rgba(0,0,0,0.6); text-align: center; }
+        #end-title { font-size: 42px; font-family: 'Unbounded', sans-serif; font-weight: 800; color: #f1d07a; margin-bottom: 20px; }
+        #end-msg { font-size: 18px; color: #9aa3b2; font-style: italic; line-height: 1.6; margin-bottom: 30px; }
+        #end-hint { font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: #6b7280; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="world">
+        <div id="exit-door" class="entity">LỐI THOÁT</div>
+
+        <div id="abyss"></div>
+        <div id="bridge" class="bridge" style="left: 350px; top: 400px;"></div>
+
+        <!-- Bên Trái (Khởi đầu) -->
+        <div id="marx" class="entity" style="left: 150px; top: 200px;">
+            <div class="char-name-tag">Marx</div>
+            <div class="char-container">
+                <div class="hair-marx"></div><div class="beard-marx"></div><div class="char-head"></div>
+                <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+
+        <div id="part-machine" class="entity machine-part" style="left: 100px; top: 500px;"></div>
+        <div id="part-wood" class="entity blueprint blueprint-wood" style="left: 250px; top: 300px;"></div>
+        <div id="part-steel" class="entity blueprint" style="left: 200px; top: 100px;"></div>
+
+        <div id="bridge-anchor" class="entity" style="left: 320px; top: 440px; width: 40px; height: 80px; background: rgba(255,255,0,0.1); border: 1px dashed yellow;"></div>
+
+        <!-- Bên Phải (Sau vực thẳm) -->
+        <div id="shadow-monster" class="shadow-monster"></div>
+        
+        <div id="fire-pit" class="entity fire-pit" style="left: 600px; top: 500px;">
+            <div id="statue" class="mini-statue"></div>
+        </div>
+        
+        <div id="hammer" class="entity hammer-obj" style="left: 500px; top: 400px;"></div>
+
+        <!-- Player -->
+        <div id="player" class="entity" style="left: 150px; top: 400px; z-index: 90;">
+            <div class="char-name-tag">Lữ Khách</div>
+            <div id="player-sprite" class="char-container">
+                <div class="char-head"></div>
+                <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="interact-prompt">F</div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" style="z-index: 2000; position: absolute; inset: 0; pointer-events: none;">
+        <div id="run-timer">00:00</div>
+        <div id="flash-msg">THÔNG BÁO</div>
+        <button id="inv-button" type="button" style="pointer-events: auto;">Hành Trang [I]</button>
+        
+        <div id="dialog-box" class="ui-panel bottom-10 left-1/2 -translate-x-1/2 w-[90%] hidden">
+            <div id="dialog-name" class="font-bold text-orange-400 mb-2 text-2xl uppercase font-['Unbounded'] tracking-wide">...</div>
+            <div id="dialog-text" class="text-gray-200 italic text-xl leading-relaxed">...</div>
+            <div class="text-sm text-gray-500 mt-6 uppercase text-center font-bold tracking-widest">Nhấn [F] để tiếp tục</div>
+        </div>
+        
+        <div id="inventory-ui" class="ui-panel top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] hidden">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-3 text-center uppercase font-['Unbounded'] text-[#f1d07a]">Túi Đồ</h2>
+            <div id="inventory-slots" class="flex flex-col mb-4 max-h-[300px] overflow-y-auto pr-2"></div>
+            <div class="text-xs text-gray-400 uppercase font-bold tracking-widest text-center mt-2">W/S: Chọn | F: Dùng/Cầm | I: Đóng</div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <div class="end-panel">
+                <h1 id="end-title">THẤU HIỂU</h1>
+                <p id="end-msg">Bạn đã kết nối đúng Lực lượng sản xuất và Quan hệ sản xuất, cũng như dùng hành động thực tiễn để phá tan ảo ảnh. Bản chất thực sự đã hiện rõ.</p>
+                <div id="end-hint">Ấn phím [F] để kết thúc</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function resizeGame() {
+        const wrapper = document.getElementById('game-wrapper');
+        const scale = Math.min(window.innerWidth / 850, window.innerHeight / 650);
+        wrapper.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resizeGame);
+    resizeGame();
+
+    const progress = Number(localStorage.getItem('mln11Progress') || '0');
+    if (progress < 2) window.location.href = 'index.html';
+
+    const CONFIG = { speed: 4, interactDist: 70 };
+    let flashTimeout;
+
+    const STATE = {
+        player: { x: 150, y: 400 },
+        gameState: 'PLAYING',
+        inventory: [],
+        selectedItemIndex: -1, 
+        previewItemIndex: -1,
+        dialogIndex: 0,
+        flags: { 
+            bridgeBuilt: false,
+            monsterAlive: true,
+            doorUnlocked: false,
+            win: false
+        },
+        interactables: [
+            { id: 'marx', x: 150, y: 200, w: 40, h: 60, type: 'npc' },
+            { id: 'part-machine', x: 100, y: 500, w: 30, h: 30, type: 'item', itemID: 'machine', name: 'Động cơ máy', icon: '⚙️', desc: 'Đại diện cho Lực lượng sản xuất tiên tiến.' },
+            { id: 'part-wood', x: 250, y: 300, w: 30, h: 30, type: 'item', itemID: 'wood_plan', name: 'Bản vẽ cầu Gỗ', icon: '🪵', desc: 'Một Quan hệ sản xuất thô sơ, cũ kỹ.' },
+            { id: 'part-steel', x: 200, y: 100, w: 30, h: 30, type: 'item', itemID: 'steel_plan', name: 'Bản vẽ cầu Thép', icon: '🏗️', desc: 'Một Quan hệ sản xuất hiện đại, vững chắc.' },
+            { id: 'bridge-anchor', x: 320, y: 440, w: 40, h: 80, type: 'bridge_anchor' },
+            { id: 'shadow-monster', x: 600, y: 250, w: 100, h: 200, type: 'monster' },
+            { id: 'hammer', x: 500, y: 400, w: 35, h: 20, type: 'item', itemID: 'hammer', name: 'Búa Thực Tiễn', icon: '🔨', desc: 'Dùng để cải tạo thế giới.' },
+            { id: 'fire-pit', x: 600, y: 500, w: 40, h: 40, type: 'statue' },
+            { id: 'door', x: 700, y: 30, w: 140, h: 60, type: 'door' }
+        ]
+    };
+
+    const keys = {};
+    const dialoguesMarx = [
+        "Hoạt động sản xuất vật chất là nền tảng của xã hội. Trong đó, công cụ lao động là yếu tố cách mạng nhất.",
+        "Nhưng hãy nhớ: Quan hệ sản xuất phải phù hợp với tính chất và trình độ của Lực lượng sản xuất.",
+        "Nếu ép máy móc hiện đại vào một bộ khung lạc hậu, nó sẽ sụp đổ.",
+        "Cuối cùng: Các nhà triết học trước kia chỉ giải thích thế giới. Vấn đề là phải dùng thực tiễn để cải tạo nó!"
+    ];
+
+    let playerSpriteEl;
+
+    function applyPlayerName() {
+        const name = localStorage.getItem('mln11PlayerName');
+        if (name) document.querySelector('#player .char-name-tag').textContent = name;
+    }
+
+    function startRunTimer() {
+        const timerEl = document.getElementById('run-timer');
+        let start = Number(localStorage.getItem('mln11RunStart') || '0');
+        if (!start) { start = Date.now(); localStorage.setItem('mln11RunStart', start); }
+        setInterval(() => {
+            const elapsed = Math.max(0, Date.now() - start);
+            const totalSec = Math.floor(elapsed / 1000);
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function init() {
+        playerSpriteEl = document.getElementById('player-sprite');
+        applyPlayerName();
+        startRunTimer();
+
+        document.getElementById('inv-button').addEventListener('click', () => {
+            if (STATE.gameState === 'PLAYING') openInventory();
+            else if (STATE.gameState === 'INVENTORY') closeInventory();
+        });
+
+        window.addEventListener('keydown', e => { 
+            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+            keys[e.code] = true; 
+            handleInput(e); 
+        });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+        requestAnimationFrame(gameLoop);
+    }
+
+    function handleInput(e) {
+        if (STATE.gameState === 'GAMEOVER') {
+            if (e.code === 'KeyF' && STATE.flags.win) {
+                localStorage.setItem('mln11Progress', '3');
+                // Tới màn sau hoặc kết thúc
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        if (e.code === 'KeyF') {
+            if (STATE.gameState === 'PLAYING') interact();
+            else if (STATE.gameState === 'DIALOG') nextDialog();
+            else if (STATE.gameState === 'INVENTORY') useEquipItem();
+        }
+        if (e.code === 'KeyI' && STATE.gameState !== 'DIALOG') {
+            if (STATE.gameState === 'PLAYING') openInventory();
+            else closeInventory();
+        }
+        if (STATE.gameState === 'INVENTORY') {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') { STATE.previewItemIndex = Math.max(0, STATE.previewItemIndex - 1); updateInventoryUI(); }
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') { STATE.previewItemIndex = Math.min(STATE.inventory.length - 1, STATE.previewItemIndex + 1); updateInventoryUI(); }
+        }
+        if (e.code === 'Escape') { closeInventory(); STATE.gameState = 'PLAYING'; }
+    }
+
+    function interact() {
+        const p = STATE.player;
+        let interacted = false;
+
+        STATE.interactables.forEach(obj => {
+            if (interacted) return;
+            const d = dist(p.x, p.y, obj.x, obj.y);
+            let checkDist = CONFIG.interactDist;
+            if (obj.type === 'door') checkDist = 80;
+            if (obj.type === 'monster') checkDist = 120;
+
+            if (d < checkDist) {
+                interacted = true;
+                if (obj.type === 'npc') {
+                    STATE.gameState = 'DIALOG'; STATE.dialogIndex = 0;
+                    document.getElementById('dialog-box').classList.remove('hidden');
+                    document.getElementById('dialog-name').textContent = "Marx";
+                    document.getElementById('dialog-text').textContent = dialoguesMarx[0];
+                }
+                else if (obj.type === 'item') {
+                    if (document.getElementById(obj.id) && document.getElementById(obj.id).style.display !== 'none') {
+                        document.getElementById(obj.id).style.display = 'none';
+                        STATE.inventory.push({ id: obj.itemID, name: obj.name, icon: obj.icon, type: 'equip', desc: obj.desc });
+                        showFlash(`ĐÃ NHẶT: ${obj.name.toUpperCase()}`);
+                    }
+                }
+                else if (obj.type === 'bridge_anchor') {
+                    handleBridge();
+                }
+                else if (obj.type === 'monster') {
+                    if (STATE.flags.monsterAlive) {
+                        showFlash("Bóng đen quái vật quá lớn, chắn ngang lối đi. Không thể vượt qua.");
+                    }
+                }
+                else if (obj.type === 'statue') {
+                    handleStatue();
+                }
+                else if (obj.type === 'door') {
+                    if (!STATE.flags.monsterAlive) {
+                        showFlash("Cửa thoát đã mở! Triết học giải phóng con người.");
+                        finishGame(true);
+                    } else {
+                        showFlash("Bạn phải đối mặt với nỗi sợ ảo ảnh trước khi rời đi.");
+                    }
+                }
+            }
+        });
+    }
+
+    function handleBridge() {
+        if (STATE.flags.bridgeBuilt) {
+            showFlash("Cầu thép vững chắc đã được thiết lập.");
+            return;
+        }
+
+        const held = STATE.inventory[STATE.selectedItemIndex];
+        const hasMachine = STATE.inventory.some(i => i.id === 'machine');
+        const hasWood = STATE.inventory.some(i => i.id === 'wood_plan');
+        const hasSteel = STATE.inventory.some(i => i.id === 'steel_plan');
+
+        if (!hasMachine) {
+            showFlash("Cần Động cơ máy (Lực lượng sản xuất) để vận hành cơ chế bắc cầu.");
+            return;
+        }
+
+        if (held) {
+            if (held.id === 'wood_plan') {
+                showFlash("RẮC! Khung gỗ (QHSX cũ) không chịu nổi Động cơ (LLSX mới). Mâu thuẫn kìm hãm!");
+            } else if (held.id === 'steel_plan') {
+                STATE.flags.bridgeBuilt = true;
+                const bridgeEl = document.getElementById('bridge');
+                bridgeEl.classList.add('steel');
+                showFlash("Sự phù hợp hoàn hảo! Cầu thép vươn ra băng qua vực thẳm.");
+                STATE.inventory = STATE.inventory.filter(i => i.id !== 'machine' && i.id !== 'steel_plan' && i.id !== 'wood_plan');
+                STATE.selectedItemIndex = -1;
+                document.getElementById('bridge-anchor').style.display = 'none';
+            } else if (held.id === 'machine') {
+                showFlash("Có Động cơ máy, nhưng cần cầm Bản vẽ tương ứng để thiết lập Quan hệ sản xuất.");
+            } else {
+                showFlash("Vật phẩm này không có tác dụng ở đây.");
+            }
+        } else {
+            showFlash("Hãy cầm trên tay Bản vẽ (QHSX) để gắn vào mỏ neo.");
+        }
+    }
+
+    function handleStatue() {
+        if (!STATE.flags.monsterAlive) return;
+        const held = STATE.inventory[STATE.selectedItemIndex];
+        if (held && held.id === 'hammer') {
+            STATE.flags.monsterAlive = false;
+            document.getElementById('statue').style.display = 'none';
+            document.getElementById('shadow-monster').style.opacity = '0';
+            showFlash("Bạn dùng Búa đập nát bức tượng! Bóng đen ảo ảnh tan biến.");
+            document.getElementById('exit-door').classList.add('unlocked');
+        } else {
+            showFlash("Một bức tượng nhỏ xíu hắt bóng qua ngọn lửa tạo thành ảo ảnh khổng lồ. (Bản chất - Hiện tượng). Cần dùng thực tiễn để phá nó.");
+        }
+    }
+
+    function openInventory() { STATE.gameState = 'INVENTORY'; if(STATE.previewItemIndex === -1 && STATE.inventory.length > 0) STATE.previewItemIndex = 0; document.getElementById('inventory-ui').classList.remove('hidden'); updateInventoryUI(); }
+    function closeInventory() { STATE.gameState = 'PLAYING'; document.getElementById('inventory-ui').classList.add('hidden'); }
+    function useEquipItem() {
+        const it = STATE.inventory[STATE.previewItemIndex];
+        if(!it) return;
+        if(it.type === 'equip') {
+            STATE.selectedItemIndex = STATE.previewItemIndex;
+            showFlash(`ĐANG TRANG BỊ: ${it.name.toUpperCase()}`);
+            closeInventory();
+        }
+    }
+    function nextDialog() {
+        STATE.dialogIndex++;
+        if (STATE.dialogIndex >= dialoguesMarx.length) { STATE.gameState = 'PLAYING'; document.getElementById('dialog-box').classList.add('hidden'); }
+        else { document.getElementById('dialog-text').textContent = dialoguesMarx[STATE.dialogIndex]; }
+    }
+
+    function updateInventoryUI() {
+        const invSlots = document.getElementById('inventory-slots');
+        invSlots.innerHTML = STATE.inventory.length ? '' : '<p class="text-center text-gray-500 py-6 italic">Hành trang trống</p>';
+        STATE.inventory.forEach((it, i) => { 
+            const isPrev = i === STATE.previewItemIndex;
+            const isHeld = i === STATE.selectedItemIndex; 
+            invSlots.innerHTML += `
+            <div class="inv-item-row ${isPrev?'selected':''} ${isHeld?'held':''}">
+                <div class="inv-icon">${it.icon}</div>
+                <div class="inv-info"><div class="inv-name">${it.name} ${isHeld ? '<span class="text-blue-400 text-xs ml-2">[Đang cầm]</span>' : ''}</div><div class="inv-desc">${it.desc}</div></div>
+            </div>`; 
+        });
+    }
+
+    function showFlash(txt) {
+        const fMsg = document.getElementById('flash-msg');
+        fMsg.textContent = txt; fMsg.style.display = 'block';
+        if (flashTimeout) clearTimeout(flashTimeout);
+        flashTimeout = setTimeout(() => { fMsg.style.display = 'none'; }, 4000);
+    }
+    
+    function dist(x1, y1, x2, y2) { return Math.sqrt((x1-x2)**2 + (y1-y2)**2); }
+
+    function isColliding(nX, nY) {
+        if (nX < 20 || nX > 780 || nY < 60 || nY > 580) return true;
+        
+        // Vực thẳm
+        if (!STATE.flags.bridgeBuilt) {
+            if (nX > 330 && nX < 470) return true; // rơi xuống vực
+        }
+
+        // Quái vật bóng râm
+        if (STATE.flags.monsterAlive) {
+            if (nX > 550 && nY < 350) return true; 
+        }
+
+        for (let obj of STATE.interactables) {
+            if (['npc', 'statue'].includes(obj.type)) {
+                if (nX > obj.x - 25 && nX < obj.x + 25 && nY > obj.y - 25 && nY < obj.y + 25) return true;
+            }
+        }
+        return false;
+    }
+
+    function finishGame(win) {
+        STATE.gameState = 'GAMEOVER'; 
+        document.getElementById('game-over-screen').classList.remove('hidden');
+        STATE.flags.win = win;
+    }
+
+    function gameLoop() {
+        if (STATE.gameState === 'PLAYING') {
+            let dx = 0, dy = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= CONFIG.speed; 
+            if (keys['KeyS'] || keys['ArrowDown']) dy += CONFIG.speed;
+            if (keys['KeyA'] || keys['ArrowLeft']) { dx -= CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(-1)'; }
+            if (keys['KeyD'] || keys['ArrowRight']) { dx += CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(1)'; }
+            
+            if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+            const nX = STATE.player.x + dx; const nY = STATE.player.y + dy;
+            if (!isColliding(nX, nY)) { STATE.player.x = nX; STATE.player.y = nY; }
+            
+            if (dx !== 0 || dy !== 0) playerSpriteEl.classList.add('walking'); else playerSpriteEl.classList.remove('walking');
+
+            document.getElementById('player').style.left = STATE.player.x + 'px';
+            document.getElementById('player').style.top = STATE.player.y + 'px';
+
+            let showPrompt = false; let pX = 0, pY = 0;
+            for (let obj of STATE.interactables) {
+                if (obj.type === 'item' && document.getElementById(obj.id) && document.getElementById(obj.id).style.display === 'none') continue;
+                if (obj.type === 'bridge_anchor' && STATE.flags.bridgeBuilt) continue;
+
+                let checkDist = CONFIG.interactDist;
+                if (obj.type === 'door') checkDist = 80;
+                if (obj.type === 'monster') checkDist = 120;
+
+                if (dist(STATE.player.x, STATE.player.y, obj.x, obj.y) < checkDist) {
+                    showPrompt = true; pX = obj.x; pY = obj.y - (obj.h || 40)/2 - 10;
+                    break;
+                }
+            }
+            const prompt = document.getElementById('interact-prompt');
+            if (showPrompt) { prompt.style.display = 'block'; prompt.style.left = pX + 'px'; prompt.style.top = pY + 'px'; }
+            else { prompt.style.display = 'none'; }
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    init();
+</script>
+
+</body>
+</html>

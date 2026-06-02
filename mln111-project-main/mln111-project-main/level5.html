@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn 5 — Mê Cung Triết Học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --frame-border: rgba(255, 255, 255, 0.08);
+            --frame-shadow: 0 40px 120px rgba(0, 0, 0, 0.7);
+            --panel-bg: rgba(12, 15, 30, 0.95);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent: #f4c95d;
+            --accent-2: #8bd3ff;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #141a35 0%, #06070d 55%, #040409 100%);
+            font-family: 'Merriweather', serif; 
+            color: #e6edf5;
+            user-select: none;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0;
+            background-color: #1a1a1a;
+            border: 1px solid var(--frame-border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--frame-shadow);
+            outline: none;
+        }
+
+        /* --- Environment --- */
+        #world {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            z-index: 0;
+        }
+
+        #world::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+        }
+
+        /* Ceiling Lamps */
+        .ceiling-lamp {
+            position: absolute; top: 0; width: 2px; height: 40px; background: #444;
+            display: flex; flex-direction: column; align-items: center; z-index: 5;
+        }
+        .lamp-bulb {
+            width: 20px; height: 20px; background: #ffd700; border-radius: 50%;
+            margin-top: 35px; box-shadow: 0 0 20px #b8860b; opacity: 0.6;
+            animation: lamp-flicker 4s infinite alternate;
+        }
+        @keyframes lamp-flicker { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.4; } 52% { opacity: 0.7; } }
+
+        /* Conveyor Belt */
+        #conveyor-belt {
+            position: absolute; width: 400px; height: 40px; background: #333;
+            top: 250px; left: 200px; border: 4px solid #111; z-index: 2;
+            overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .belt-pattern {
+            width: 200%; height: 100%;
+            background-image: repeating-linear-gradient(90deg, #222, #222 10px, #444 10px, #444 20px);
+            animation: belt-scroll 2s infinite linear;
+        }
+        @keyframes belt-scroll { from { transform: translateX(-40px); } to { transform: translateX(0); } }
+
+        .pipe-decor { position: absolute; background: #222; border: 1px solid #333; z-index: 1; }
+
+        /* Exit Door Design */
+        #exit-gate-container {
+            position: absolute; top: 30px; left: 400px; transform: translateX(-50%);
+            width: 120px; height: 100px; z-index: 5;
+        }
+        .door-frame {
+            width: 100%; height: 100%; background: #111; border: 4px solid #444;
+            border-bottom: none; border-radius: 10px 10px 0 0;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        #exit-sign {
+            background: #444; color: #777; font-weight: bold; font-size: 14px;
+            padding: 2px 10px; margin-top: 10px; border-radius: 3px; transition: all 0.5s;
+        }
+        .door-light { width: 100%; height: 100%; background: radial-gradient(circle, #fff 0%, transparent 70%); opacity: 0.05; }
+
+        /* --- Player Model --- */
+        .entity { position: absolute; transform: translate(-50%, -50%); z-index: 50; }
+        .char-container { position: relative; width: 40px; height: 60px; z-index: 90; }
+        .char-head { position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; background: #f39c12; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; }
+        .char-body { position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; background: #2980b9; border: 2px solid #fff; border-radius: 4px; z-index: 10; }
+        .char-arm { position: absolute; width: 6px; height: 16px; background: #2980b9; border: 1px solid #fff; border-radius: 3px; top: 2px; }
+        .arm-left { left: -7px; transform-origin: top center; } .arm-right { right: -7px; transform-origin: top center; }
+        .char-leg { position: absolute; width: 8px; height: 14px; background: #1c5982; border: 1px solid #fff; border-radius: 3px; top: 42px; }
+        .leg-left { left: 11px; } .leg-right { right: 11px; }
+        
+        .walking .leg-left { animation: leg-swing 0.4s infinite alternate; }
+        .walking .leg-right { animation: leg-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-left { animation: arm-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-right { animation: arm-swing 0.4s infinite alternate; }
+        @keyframes leg-swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+        @keyframes arm-swing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+
+        #player .char-head { background: #f39c12; border-color: #fff; }
+        #player .char-body, #player .char-arm { background: #2980b9; border-color: #fff; }
+        #player .char-leg { background: #1c5982; border-color: #fff; }
+        
+        #marx .char-head { background: #f5f5f5; border: 1.5px solid #fff; }
+        #marx .char-head::after {
+            content: ''; position: absolute; bottom: -5px; left: 0; width: 18px; height: 12px;
+            background: #eee; border-radius: 5px 5px 15px 15px; border: 1px solid #999; z-index: 16;
+        }
+        #marx .char-body, #marx .char-arm { background: #fff; border-color: #ddd; }
+        #marx .char-leg { background: #eee; border-color: #ddd; }
+        .char-name-tag { position: absolute; top: -32px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 14px; font-weight: bold; color: #f39c12; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 100; }
+        #player .char-name-tag { color: #3498db; }
+        #marx .char-name-tag { color: #f39c12; }
+
+        /* --- Machines & Items --- */
+        .industrial-crate { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 45px; cursor: pointer; }
+        .machine-node { width: 80px; height: 100px; background: #222; border: 3px solid #444; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .node-btn { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #111; background: #991b1b; transition: all 0.3s; }
+        .node-active { background: #16a34a; box-shadow: 0 0 10px #16a34a; }
+        
+        #furnace { width: 100px; height: 120px; background: #333; border: 4px solid #555; position: relative; }
+        .fire-glow { position: absolute; bottom: 10px; left: 20%; width: 60%; height: 30px; background: #ea580c; filter: blur(10px); animation: fire-flicker 0.5s infinite alternate; }
+        @keyframes fire-flicker { from { opacity: 0.5; } to { opacity: 1; } }
+
+        #mold-machine { width: 120px; height: 100px; background: #333; border: 4px solid #555; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; text-align: center; color: #ccc; }
+        
+        /* Styled Bucket */
+        #bucket-container { width: 40px; height: 40px; position: relative; }
+        .bucket-body { width: 30px; height: 35px; background: linear-gradient(135deg, #78909c, #455a64); border: 2px solid #263238; border-radius: 0 0 8px 8px; clip-path: polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%); margin: 5px auto; }
+        .bucket-handle { width: 26px; height: 18px; border: 2px solid #37474f; border-radius: 50% 50% 0 0; position: absolute; top: -4px; left: 7px; border-bottom: none; }
+
+        /* UI */
+        #interact-prompt { position: absolute; background: linear-gradient(135deg, #f1d07a, #d6b25e); color: #1b1b24; font-weight: bold; padding: 4px 12px; border-radius: 999px; z-index: 200; display: none; transform: translate(-50%, -100%); border: 1px solid rgba(0,0,0,0.35); text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.35); }
+        .ui-panel { position: absolute; background: rgba(12, 14, 22, 0.94); border: 1px solid rgba(214, 178, 94, 0.25); padding: 20px; z-index: 1000; box-shadow: 0 18px 45px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03); border-radius: 16px; }
+        
+        #flash-msg { 
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%); 
+            background: rgba(214, 178, 94, 0.95); color: #1b1b24; padding: 10px 30px; border-radius: 999px; 
+            z-index: 2000; display: none; text-align: center; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 0.08em; font-family: 'Unbounded', sans-serif; font-size: 14px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+        }
+
+        #run-timer {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        #terminal-display { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(10, 12, 22, 0.95); border: 1px solid rgba(214, 178, 94, 0.35); padding: 20px; z-index: 1000; border-radius: 16px; }
+        #key-output { background: #111; color: #f87171; font-family: monospace; font-size: 28px; padding: 10px; margin-bottom: 10px; letter-spacing: 5px; text-align: center; }
+
+        #conclusion-screen {
+            position: absolute; inset: 0; background: #000; z-index: 9999;
+            display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; padding: 50px;
+        }
+        .conclusion-title { font-size: 72px; font-weight: 900; color: #4ade80; letter-spacing: 15px; margin-bottom: 40px; font-family: 'Unbounded', sans-serif; }
+        .conclusion-body { font-size: 20px; max-width: 800px; line-height: 1.8; font-style: italic; color: #d1d5db; margin-bottom: 60px; }
+
+        .inv-row { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s; }
+        .inv-row.selected { background: rgba(214, 178, 94, 0.12); border-left: 4px solid #d6b25e; }
+
+        #dialog-speaker,
+        #inventory-ui h2,
+        #terminal-display h3 {
+            font-family: 'Unbounded', sans-serif;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #f1d07a;
+        }
+
+        #inv-button {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        #inv-button:hover { background: rgba(214, 178, 94, 0.15); }
+        #inv-button:active { transform: translateY(1px); }
+
+        /* --- Cinematic skin (manual, non-AI look) --- */
+        #game-container {
+            border-color: rgba(214, 178, 94, 0.35);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+        }
+        #game-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            box-shadow: inset 0 0 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: none;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container" tabindex="0">
+    <div id="world">
+        <!-- Ceiling Lights -->
+        <div class="ceiling-lamp" style="left: 150px;"><div class="lamp-bulb"></div></div>
+        <div class="ceiling-lamp" style="left: 400px;"><div class="lamp-bulb"></div></div>
+        <div class="ceiling-lamp" style="left: 650px;"><div class="lamp-bulb"></div></div>
+
+        <!-- Conveyor Belt -->
+        <div id="conveyor-belt">
+            <div class="belt-pattern"></div>
+        </div>
+
+        <div class="pipe-decor" style="width: 15px; height: 600px; left: 80px; top: 0;"></div>
+        <div class="pipe-decor" style="width: 800px; height: 10px; left: 0; top: 200px;"></div>
+
+        <!-- Exit Gate -->
+        <div id="exit-gate-container" class="entity">
+            <div class="door-frame">
+                <div id="exit-sign">EXIT</div>
+                <div class="door-light"></div>
+            </div>
+        </div>
+
+        <!-- Sequence Machines -->
+        <div id="node-product" class="entity machine-node" style="left: 200px; top: 400px;">
+            <div class="node-btn"></div>
+            <div class="text-[10px] mt-2 font-bold text-gray-500 uppercase">SẢN PHẨM</div>
+        </div>
+        <div id="node-means" class="entity machine-node" style="left: 400px; top: 400px;">
+            <div class="node-btn"></div>
+            <div class="text-[10px] mt-2 font-bold text-gray-500 uppercase">TƯ LIỆU</div>
+        </div>
+        <div id="node-labor" class="entity machine-node" style="left: 600px; top: 400px;">
+            <div class="node-btn"></div>
+            <div class="text-[10px] mt-2 font-bold text-gray-500 uppercase">LAO ĐỘNG</div>
+        </div>
+
+        <!-- Terminal -->
+        <div id="terminal" class="entity" style="left: 400px; top: 520px; opacity: 0.3;">
+            <div style="width: 60px; height: 40px; background: #222; border: 2px solid #555; display: flex; align-items: center; justify-content: center; color: #f87171; font-size: 10px; font-weight: bold;">CODE 🔒</div>
+        </div>
+
+        <!-- Boxes -->
+        <div id="box-right" class="entity industrial-crate" style="left: 720px; top: 520px;">📦</div>
+        <div id="box-left" class="entity industrial-crate" style="left: 80px; top: 520px;">📦</div>
+        
+        <div id="furnace" class="entity" style="left: 720px; top: 280px;">
+            <div class="fire-glow"></div>
+            <div class="text-center text-[10px] mt-2 font-bold text-gray-400 uppercase">LÒ NUNG</div>
+        </div>
+
+        <div id="mold-machine" class="entity" style="left: 80px; top: 280px;">
+            MÁY ĐỊNH HÌNH
+        </div>
+
+        <!-- Bucket -->
+        <div id="bucket-item" class="entity" style="left: 750px; top: 80px;">
+            <div id="bucket-container">
+                <div class="bucket-handle"></div>
+                <div class="bucket-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NPC Karl Marx -->
+    <div id="marx" class="entity" style="left: 650px; top: 150px;">
+        <div class="char-name-tag">Karl Marx</div>
+        <div class="char-container">
+            <div class="char-head"></div>
+            <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+            <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+        </div>
+    </div>
+
+    <!-- Player: Lữ khách -->
+    <div id="player" class="entity" style="left: 400px; top: 320px;">
+        <div class="char-name-tag">Lữ Khách</div>
+        <div id="player-sprite" class="char-container">
+            <div class="char-head"></div>
+            <div class="char-body"><div class="char-arm arm-left"></div><div class="char-arm arm-right"></div></div>
+            <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+        </div>
+    </div>
+
+    <div id="interact-prompt">F</div>
+
+    <!-- UI -->
+    <div id="run-timer">00:00</div>
+    <div id="flash-msg"></div>
+    <button id="inv-button" type="button">Hành Trang [I]</button>
+
+    <div id="dialog-box" class="ui-panel" style="bottom: 20px; left: 50%; transform: translateX(-50%); width: 700px; display: none;">
+        <h3 id="dialog-speaker" class="font-bold text-red-500 mb-1">...</h3>
+        <p id="dialog-text" class="italic text-gray-200">...</p>
+        <p class="text-xs text-gray-500 mt-4 text-right">[F] Tiếp tục</p>
+    </div>
+
+    <div id="inventory-ui" class="ui-panel" style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; display: none;">
+        <h2 class="text-xl font-bold mb-4 text-red-500 text-center border-b border-red-900 pb-2 uppercase">Hành trang</h2>
+        <div id="inv-list" class="mb-4 max-h-40 overflow-y-auto"></div>
+        <div class="text-xs text-center text-gray-400">W/S: Di chuyển | F: Sử dụng | I: Đóng</div>
+    </div>
+
+    <div id="terminal-display" class="ui-panel">
+        <h3 class="text-red-500 font-bold mb-4 text-center">GIẢI PHÓNG HỆ THỐNG</h3>
+        <div id="key-output">________</div>
+        <p class="text-[10px] text-gray-500 text-center">Gợi ý: Thời điểm hạt giống của sự thay đổi được gieo xuống.</p>
+        <p class="text-xs text-center mt-4">[ESC] Thoát</p>
+    </div>
+
+    <div id="conclusion-screen" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-[9999]">
+        <h1 id="end-title" class="text-7xl font-serif font-bold text-emerald-400 mb-4 tracking-tighter">CHÚC MỪNG</h1>
+        <p id="end-msg" class="text-xl italic text-gray-400 mb-6 text-center max-w-lg leading-relaxed">
+            "Bạn đã hoàn thành hành trình và chạm tới chân lý cuối cùng."
+        </p>
+        <div id="end-time" class="text-lg text-amber-200 tracking-widest mb-8">TỔNG THỜI GIAN: 00:00</div>
+        <div id="end-hint" class="text-gray-500 text-lg uppercase tracking-widest animate-pulse">Ấn phím [F] để về menu</div>
+    </div>
+</div>
+
+<script>
+    const progress = Number(localStorage.getItem('mln11Progress') || '0');
+    if (progress < 4) window.location.href = 'index.html';
+    const NAME_KEY = 'mln11PlayerName';
+    const RUN_START_KEY = 'mln11RunStart';
+    const SUPABASE_URL = 'https://ttloqljdsfkrkzsuzwgz.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0bG9xbGpkc2Zrcmt6c3V6d2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMzIzMjQsImV4cCI6MjA4NTcwODMyNH0.-AgPKBKeB_XWH6D8cThH5Iy2EBoYRnrF8NkhgK5Qy5g';
+    const SUPABASE_TABLES = ['leaderboard', 'leaderboards'];
+    const SUPABASE_HEADERS = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+    };
+    const CONFIG = { speed: 2.2, interactDist: 70 };
+    let flashTimeout;
+
+    const STATE = {
+        player: { x: 400, y: 320 },
+        gameState: 'PLAYING',
+        inventory: [],
+        selectedInv: 0,
+        uiState: 'NONE',
+        sequence: [],
+        correctSequence: ['node-means', 'node-labor', 'node-product'],
+        flags: {
+            hasIron: false,
+            ironHeated: false,
+            hasBucket: false,
+            ironInBucket: false,
+            hasHammer: false,
+            terminalReady: false,
+            gateUnlocked: false,
+            runRecorded: false
+        },
+        items: [
+            { id: 'marx', x: 650, y: 150, type: 'npc', name: 'Karl Marx' },
+            { id: 'box-right', x: 720, y: 520, type: 'crate', name: 'Hòm gỗ cũ' },
+            { id: 'furnace', x: 720, y: 280, type: 'furnace', name: 'Lò nung' },
+            { id: 'bucket-item', x: 750, y: 80, type: 'pickup', name: 'Chiếc xô kim loại' },
+            { id: 'mold-machine', x: 80, y: 280, type: 'mold', name: 'Máy định hình' },
+            { id: 'box-left', x: 80, y: 520, type: 'crate', name: 'Hòm thép khóa' },
+            { id: 'node-means', x: 400, y: 400, type: 'node', name: 'Tư liệu' },
+            { id: 'node-labor', x: 600, y: 400, type: 'node', name: 'Lao động' },
+            { id: 'node-product', x: 200, y: 400, type: 'node', name: 'Sản phẩm' },
+            { id: 'terminal', x: 400, y: 520, type: 'terminal', name: 'Terminal trung tâm' },
+            { id: 'exit-gate-container', x: 400, y: 80, type: 'exit', name: 'Cổng EXIT' }
+        ],
+        inputPass: ""
+    };
+
+    const marxDialogues = [
+        "Lao động tạo ra con người, hay con người bị lao động nuốt chửng?",
+        "Vật chất rỉ sét có thể hồi sinh qua hơi thở của lửa đỏ không?",
+        "Tư liệu, sức lao động, sản phẩm... liệu cái nào đứng trước trong chu trình của sự tồn tại?",
+        "Sự thật thường bị giấu trong đống đổ nát của lịch sử. Bạn có dám nhìn vào nơi khởi đầu của mọi sự thay đổi?"
+    ];
+    let dialogIdx = 0;
+
+    const keys = {};
+    let playerEl, spriteEl, promptEl, dialogBox, invUI, terminalUI, flashEl;
+
+    function getPlayerName() {
+        const raw = localStorage.getItem(NAME_KEY);
+        if (!raw) return "";
+        const name = raw.trim();
+        return name.length ? name : "";
+    }
+
+    function applyPlayerName() {
+        const name = getPlayerName();
+        if (!name) return;
+        const tag = document.querySelector('#player .char-name-tag');
+        if (tag) tag.textContent = name;
+    }
+
+    function formatDuration(ms) {
+        const totalSec = Math.max(0, Math.floor(ms / 1000));
+        const hours = Math.floor(totalSec / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        if (hours > 0) {
+            return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updateEndTime(ms) {
+        const endTimeEl = document.getElementById('end-time');
+        if (!endTimeEl) return;
+        endTimeEl.textContent = `TỔNG THỜI GIAN: ${formatDuration(ms)}`;
+    }
+
+    function ensureRunStart() {
+        const current = Number(localStorage.getItem(RUN_START_KEY) || '0');
+        if (!current) {
+            localStorage.setItem(RUN_START_KEY, String(Date.now()));
+        }
+    }
+
+    function startRunTimer() {
+        const timerEl = document.getElementById('run-timer');
+        if (!timerEl) return;
+
+        ensureRunStart();
+
+        const tick = () => {
+            const start = Number(localStorage.getItem(RUN_START_KEY) || '0');
+            if (!start) {
+                timerEl.textContent = '00:00';
+                return;
+            }
+            const elapsed = Math.max(0, Date.now() - start);
+            const totalSec = Math.floor(elapsed / 1000);
+            const hours = Math.floor(totalSec / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            if (hours > 0) {
+                timerEl.textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        };
+
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    async function submitLeaderboardEntry(name, timeMs) {
+        const timeValue = Math.round(timeMs);
+        const payloads = [
+            { name, time_ms: timeValue },
+            { name, timeMs: timeValue },
+            { player_name: name, time_ms: timeValue },
+            { player_name: name, timeMs: timeValue },
+            { playerName: name, time_ms: timeValue },
+            { playerName: name, timeMs: timeValue }
+        ];
+
+        for (const table of SUPABASE_TABLES) {
+            for (const payload of payloads) {
+                try {
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+                        method: 'POST',
+                        headers: {
+                            ...SUPABASE_HEADERS,
+                            Prefer: 'return=minimal'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) return;
+                } catch (err) {
+                    console.warn('Leaderboard insert failed', err);
+                }
+            }
+        }
+        showFlash("Không thể lưu thành tích. Vui lòng kiểm tra Supabase.");
+    }
+
+    function finalizeRun() {
+        if (STATE.flags.runRecorded) return;
+        STATE.flags.runRecorded = true;
+        const startRaw = localStorage.getItem(RUN_START_KEY);
+        const start = startRaw ? Number(startRaw) : 0;
+        if (Number.isFinite(start) && start > 0) {
+            const elapsed = Math.max(0, Date.now() - start);
+            const name = getPlayerName() || "Lữ Khách";
+            submitLeaderboardEntry(name, elapsed);
+            updateEndTime(elapsed);
+        } else {
+            updateEndTime(0);
+            showFlash("Không tìm thấy thời gian bắt đầu. Hãy chơi từ Màn 1.");
+        }
+        localStorage.removeItem(RUN_START_KEY);
+        localStorage.setItem('mln11Progress', '5');
+    }
+
+    function init() {
+        playerEl = document.getElementById('player');
+        spriteEl = document.getElementById('player-sprite');
+        promptEl = document.getElementById('interact-prompt');
+        dialogBox = document.getElementById('dialog-box');
+        invUI = document.getElementById('inventory-ui');
+        terminalUI = document.getElementById('terminal-display');
+        flashEl = document.getElementById('flash-msg');
+        const invButton = document.getElementById('inv-button');
+        applyPlayerName();
+        startRunTimer();
+
+        document.getElementById('game-container').focus();
+
+        if (invButton) {
+            invButton.addEventListener('click', () => {
+                if (STATE.uiState === 'NONE') openInventory();
+                else if (STATE.uiState === 'INVENTORY') closeInventory();
+            });
+        }
+
+        window.addEventListener('keydown', e => {
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
+            keys[e.code] = true;
+            handleInput(e);
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        requestAnimationFrame(loop);
+    }
+
+    function handleInput(e) {
+        if (STATE.uiState === 'TERMINAL') {
+            if (e.code === 'Escape') { hideTerminal(); return; }
+            if (e.key >= '0' && e.key <= '9') {
+                STATE.inputPass += e.key;
+                document.getElementById('key-output').textContent = STATE.inputPass.padEnd(8, '_');
+                if (STATE.inputPass.length === 8) {
+                    if (STATE.inputPass === "05051818") {
+                        showFlash("MẬT MÃ KHỚP. GIẢI PHÓNG HỆ THỐNG.");
+                        STATE.flags.gateUnlocked = true;
+                        const sign = document.getElementById('exit-sign');
+                        sign.style.background = "#16a34a";
+                        sign.style.color = "#fff";
+                        sign.style.boxShadow = "0 0 25px #22c55e";
+                        hideTerminal();
+                    } else {
+                        showFlash("SAI NHẬN THỨC.");
+                        STATE.inputPass = "";
+                        document.getElementById('key-output').textContent = "________";
+                    }
+                }
+            }
+            return;
+        }
+
+        if (STATE.uiState === 'DIALOG') {
+            if (e.code === 'KeyF') {
+                if (dialogIdx < marxDialogues.length - 1) {
+                    dialogIdx++;
+                    document.getElementById('dialog-text').innerText = marxDialogues[dialogIdx];
+                } else {
+                    dialogIdx = 0;
+                    dialogBox.style.display = 'none';
+                    STATE.uiState = 'NONE';
+                }
+            }
+            return;
+        }
+
+        if (STATE.uiState === 'INVENTORY') {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+                STATE.selectedInv = (STATE.selectedInv - 1 + STATE.inventory.length) % STATE.inventory.length;
+                renderInventory();
+            }
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+                STATE.selectedInv = (STATE.selectedInv + 1) % STATE.inventory.length;
+                renderInventory();
+            }
+            if (e.code === 'KeyF') {
+                useItemSelected();
+            }
+            if (e.code === 'KeyI' || e.code === 'Escape') {
+                toggleInventory();
+            }
+            return;
+        }
+
+        if (STATE.uiState === 'CONCLUSION') {
+            if (e.code === 'KeyF') window.location.href = 'index.html';
+            return;
+        }
+
+        if (e.code === 'KeyF' && STATE.uiState === 'NONE') interact();
+        if (e.code === 'KeyI' && STATE.uiState === 'NONE') toggleInventory();
+    }
+
+    function interact() {
+        const target = getClosestInteractable();
+        if (!target) return;
+
+        if (target.id === 'marx') {
+            STATE.uiState = 'DIALOG';
+            dialogBox.style.display = 'block';
+            document.getElementById('dialog-speaker').innerText = "Karl Marx";
+            document.getElementById('dialog-text').innerText = marxDialogues[dialogIdx];
+            return;
+        }
+
+        switch(target.type) {
+            case 'crate':
+                if (target.id === 'box-right') {
+                    if (!STATE.flags.hasIron) {
+                        STATE.flags.hasIron = true;
+                        addToInv('iron', 'Thanh sắt rỉ', '⛓️');
+                        showFlash("Bạn tìm thấy một thanh sắt lạnh lẽo.");
+                    } else showFlash("Hòm đã trống rỗng.");
+                } else if (target.id === 'box-left') {
+                    if (STATE.flags.hasHammer) {
+                        showFlash("Bên trong là vết tích: 05 - 05 - 1818");
+                    } else showFlash("Hòm thép bị khóa bởi xiềng xích nhận thức.");
+                }
+                break;
+
+            case 'pickup':
+                if (target.id === 'bucket-item') {
+                    STATE.flags.hasBucket = true;
+                    addToInv('bucket', 'Xô kim loại', '🪣');
+                    document.getElementById('bucket-item').style.display = 'none';
+                    showFlash("Bạn nắm giữ vật chứa sức nóng.");
+                }
+                break;
+
+            case 'node':
+                if (STATE.flags.terminalReady || STATE.sequence.includes(target.id)) return;
+                STATE.sequence.push(target.id);
+                document.getElementById(target.id).querySelector('.node-btn').classList.add('node-active');
+                
+                const curIdx = STATE.sequence.length - 1;
+                if (STATE.sequence[curIdx] !== STATE.correctSequence[curIdx]) {
+                    showFlash("TRẬT TỰ SAI LỆCH.");
+                    setTimeout(() => {
+                        STATE.sequence = [];
+                        document.querySelectorAll('.node-btn').forEach(b => b.classList.remove('node-active'));
+                    }, 400);
+                } else if (STATE.sequence.length === 3) {
+                    STATE.flags.terminalReady = true;
+                    document.getElementById('terminal').style.opacity = '1';
+                    showFlash("QUY TRÌNH ĐÃ THÔNG SUỐT.");
+                }
+                break;
+
+            case 'terminal':
+                if (STATE.flags.terminalReady) showTerminal();
+                else showFlash("Hệ thống chỉ phản hồi khi quy trình hoàn thiện.");
+                break;
+
+            case 'exit':
+                if (STATE.flags.gateUnlocked) {
+                    finalizeRun();
+                    STATE.uiState = 'CONCLUSION';
+                    document.getElementById('conclusion-screen').style.display = 'flex';
+                } else showFlash("Xiềng xích của hệ thống vẫn còn đó.");
+                break;
+
+            case 'furnace':
+                if (STATE.flags.ironHeated && !STATE.flags.ironInBucket) {
+                    showFlash("QUÁ NÓNG! Bàn tay trần không thể chạm tới.");
+                } else if (!STATE.flags.hasIron && !STATE.flags.ironInBucket) {
+                    showFlash("Vật chất ở đâu để bắt đầu nung nấu?");
+                }
+                break;
+        }
+    }
+
+    function useItemSelected() {
+        const item = STATE.inventory[STATE.selectedInv];
+        if (!item) return;
+
+        const target = getClosestInteractable();
+        if (!target) {
+            showFlash("Không có gì ở đây để sử dụng.");
+            return;
+        }
+
+        if (item.id === 'iron' && target.type === 'furnace') {
+            STATE.flags.ironHeated = true;
+            showFlash("Lửa đỏ đã nung nóng vật chất.");
+            toggleInventory();
+        } 
+        else if (item.id === 'bucket' && target.type === 'furnace') {
+            if (STATE.flags.ironHeated) {
+                STATE.flags.ironInBucket = true;
+                removeItem('iron');
+                addToInv('hot_iron', 'Sắt nung nóng', '🔥');
+                showFlash("Bạn dùng xô để kiềm chế sức nóng.");
+                toggleInventory();
+            } else {
+                showFlash("Lò chưa có gì nóng để đựng.");
+            }
+        }
+        else if (item.id === 'hot_iron' && target.type === 'mold') {
+            STATE.flags.hasHammer = true;
+            removeItem('hot_iron');
+            addToInv('hammer', 'Búa thép', '🔨');
+            showFlash("VẬT CHẤT ĐÃ ĐƯỢC ĐỊNH HÌNH THÀNH CÔNG CỤ.");
+            toggleInventory();
+        }
+        else if (item.id === 'hammer' && target.id === 'box-left') {
+            showFlash("Bên trong là vết tích: 05 - 05 - 1818");
+            toggleInventory();
+        }
+        else {
+            showFlash("Món đồ này không có tác dụng ở đây.");
+        }
+    }
+
+    function showTerminal() { STATE.uiState = 'TERMINAL'; terminalUI.style.display = 'block'; STATE.inputPass = ""; document.getElementById('key-output').textContent = "________"; }
+    function hideTerminal() { STATE.uiState = 'NONE'; terminalUI.style.display = 'none'; }
+    
+    function toggleInventory() { 
+        if (STATE.uiState === 'INVENTORY') { 
+            STATE.uiState = 'NONE'; 
+            invUI.style.display = 'none'; 
+        } else if (STATE.uiState === 'NONE') { 
+            STATE.uiState = 'INVENTORY'; 
+            invUI.style.display = 'block'; 
+            STATE.selectedInv = 0;
+            renderInventory(); 
+        } 
+    }
+
+    function addToInv(id, name, icon) { STATE.inventory.push({id, name, icon}); }
+    function removeItem(id) { STATE.inventory = STATE.inventory.filter(i => i.id !== id); }
+
+    function renderInventory() { 
+        const list = document.getElementById('inv-list'); 
+        list.innerHTML = ''; 
+        STATE.inventory.forEach((item, idx) => { 
+            const div = document.createElement('div'); 
+            div.className = `inv-row ${idx === STATE.selectedInv ? 'selected' : ''}`; 
+            div.innerHTML = `<span class="text-2xl mr-4">${item.icon}</span><span class="font-bold text-white uppercase text-xs tracking-widest">${item.name}</span>`; 
+            list.appendChild(div); 
+        }); 
+        if (STATE.inventory.length === 0) list.innerHTML = '<p class="text-center py-4 text-gray-600">Trống rỗng</p>'; 
+    }
+    
+    function showFlash(msg) { 
+        if (!flashEl) return;
+        flashEl.innerText = msg; 
+        flashEl.style.display = 'block'; 
+        clearTimeout(flashTimeout); 
+        flashTimeout = setTimeout(() => { if(flashEl) flashEl.style.display = 'none'; }, 3000); 
+    }
+
+    function dist(x1, y1, x2, y2) { return Math.sqrt((x1-x2)**2 + (y1-y2)**2); }
+    function getClosestInteractable() { let t = null; let min = CONFIG.interactDist; STATE.items.forEach(i => { const d = dist(STATE.player.x, STATE.player.y, i.x, i.y); if (d < min) { min = d; t = i; } }); return t; }
+
+    function loop() {
+        if (STATE.uiState === 'NONE') {
+            let dx = 0, dy = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.sqrt(dx*dx + dy*dy);
+                dx = (dx/len) * CONFIG.speed;
+                dy = (dy/len) * CONFIG.speed;
+                playerEl.classList.add('walking');
+                if (dx < 0) spriteEl.style.transform = "scaleX(-1)";
+                if (dx > 0) spriteEl.style.transform = "scaleX(1)";
+            } else playerEl.classList.remove('walking');
+
+            let nx = STATE.player.x + dx;
+            let ny = STATE.player.y + dy;
+            nx = Math.max(30, Math.min(770, nx));
+            ny = Math.max(30, Math.min(570, ny));
+
+            STATE.player.x = nx; STATE.player.y = ny;
+            playerEl.style.left = STATE.player.x + 'px';
+            playerEl.style.top = STATE.player.y + 'px';
+
+            const target = getClosestInteractable();
+            if (target) {
+                promptEl.style.display = 'block';
+                promptEl.style.left = target.x + 'px';
+                promptEl.style.top = (target.y - 60) + 'px';
+            } else promptEl.style.display = 'none';
+        }
+        requestAnimationFrame(loop);
+    }
+    window.onload = init;
+</script>
+</body>
+</html>

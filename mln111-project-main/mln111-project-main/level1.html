@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn 1 — Mê Cung Triết Học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --frame-border: rgba(255, 255, 255, 0.08);
+            --frame-shadow: 0 40px 120px rgba(0, 0, 0, 0.7);
+            --panel-bg: rgba(12, 15, 30, 0.95);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent: #f4c95d;
+            --accent-2: #8bd3ff;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #141a35 0%, #06070d 55%, #040409 100%);
+            font-family: 'Merriweather', serif;
+            color: #e6edf5;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0;
+            background: #0f120a;
+            border: 1px solid var(--frame-border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--frame-shadow);
+            outline: none;
+        }
+
+        /* Ground */
+        #world {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #0f120a;
+            background-image: radial-gradient(#1a1d12 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 0;
+        }
+
+        /* Paths */
+        .path {
+            position: absolute;
+            background: rgba(100, 100, 90, 0.28);
+            filter: blur(15px);
+            z-index: 1;
+            border-radius: 50px;
+        }
+
+        /* Nature Layer */
+        .nature-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Graphics */
+        .entity {
+            position: absolute;
+            transform-origin: center;
+        }
+
+        /* --- Character Model --- */
+        .char-container {
+            position: relative;
+            width: 40px;
+            height: 60px;
+            z-index: 90;
+        }
+
+        .char-name-tag {
+            position: absolute;
+            top: -32px; /* Adjusted for larger font */
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 14px; /* Increased from 11px */
+            font-weight: bold;
+            color: #f39c12;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .char-head {
+            position: absolute; top: 2px; left: 11px; width: 18px; height: 18px;
+            background: #f39c12; border: 1.5px solid #fff; border-radius: 50%; z-index: 15;
+        }
+
+        /* Descartes Features */
+        .hair {
+            position: absolute; top: 0; left: 8px; width: 24px; height: 24px;
+            background: #2b1d1a; border-radius: 45% 45% 10% 10%; z-index: 14;
+        }
+        .hair::after {
+            content: ''; position: absolute; top: 10px; left: -2px; width: 28px; height: 20px;
+            background: #2b1d1a; border-radius: 6px;
+        }
+        .collar {
+            position: absolute; top: 18px; left: 12px; width: 16px; height: 7px;
+            background: #fff; clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%); z-index: 16;
+        }
+        .char-body {
+            position: absolute; top: 18px; left: 8px; width: 24px; height: 26px;
+            background: #2980b9; border: 2px solid #fff; border-radius: 4px; z-index: 10;
+        }
+        #descartes .char-body { background: #1a3c34; border-color: #2a2d22; }
+
+        .char-arm {
+            position: absolute; width: 6px; height: 16px; background: #2980b9; border: 1px solid #fff; border-radius: 3px; top: 2px;
+        }
+        .arm-left { left: -7px; transform-origin: top center; }
+        .arm-right { right: -7px; transform-origin: top center; }
+        #descartes .char-arm { background: #1a3c34; border-color: #2a2d22; }
+
+        .char-leg {
+            position: absolute; width: 8px; height: 14px; background: #1c5982; border: 1px solid #fff; border-radius: 3px; top: 42px;
+        }
+        .leg-left { left: 11px; transform-origin: top center; }
+        .leg-right { right: 11px; transform-origin: top center; }
+        #descartes .char-leg { background: #0a1a15; border-color: #2a2d22; }
+
+        .walking .leg-left { animation: leg-swing 0.4s infinite alternate; }
+        .walking .leg-right { animation: leg-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-left { animation: arm-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-right { animation: arm-swing 0.4s infinite alternate; }
+
+        @keyframes leg-swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+        @keyframes arm-swing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+
+        /* World Objects */
+        .cabinet-container { z-index: 40; } 
+        .cabinet-body {
+            width: 50px; height: 70px; background: #3e2723;
+            border: 3px solid #2a1b18; border-radius: 2px;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.5); position: relative;
+        }
+        .cabinet-handle { position: absolute; width: 4px; height: 10px; background: #d4af37; border-radius: 2px; top: 30px; box-shadow: 0 0 5px rgba(212, 175, 55, 0.5); }
+        .handle-left { right: 15px; } .handle-right { right: 8px; }
+        .cabinet-leg { position: absolute; bottom: -8px; width: 6px; height: 8px; background: #2a1b18; }
+
+        .mirror-container { z-index: 40; } 
+        .mirror-stand { position: relative; width: 50px; height: 100px; display: flex; flex-direction: column; align-items: center; }
+        .mirror-frame { width: 40px; height: 80px; background: #5d4037; border: 4px solid #3e2723; border-radius: 20px 20px 5px 5px; position: relative; overflow: hidden; box-shadow: 0 0 15px rgba(52, 152, 219, 0.3); }
+        .mirror-glass { position: absolute; inset: 4px; background: linear-gradient(135deg, #d6eaf8, #5dade2, #2e86c1); border-radius: 15px 15px 2px 2px; opacity: 0.9; animation: mirror-shimmer 3s infinite alternate; }
+        .mirror-leg-base { width: 50px; height: 8px; background: #3e2723; border-radius: 4px; margin-top: -2px; }
+
+        /* Flame */
+        .torch { position: absolute; width: 20px; height: 50px; display: flex; flex-direction: column; align-items: center; z-index: 40; }
+        .torch-flame { position: relative; width: 14px; height: 24px; transform-origin: bottom center; animation: flame-flicker-real 0.1s infinite alternate ease-in-out; }
+        .flame-layer { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 50% 50% 20% 20% / 80% 80% 20% 20%; }
+        .flame-outer { width: 14px; height: 24px; background: #ff3d00; box-shadow: 0 0 12px #ff3d00; opacity: 0.8; }
+        .flame-inner { width: 9px; height: 16px; background: #ffae00; bottom: 2px; }
+        .flame-core { width: 4px; height: 10px; background: #ffffff; bottom: 4px; opacity: 0.9; }
+        @keyframes flame-flicker-real { 0% { transform: scale(1, 1) rotate(-1deg) skewX(1deg); } 100% { transform: scale(1.15, 0.95) rotate(1deg) skewX(-1deg); filter: brightness(1.2); } }
+        .torch-stick { width: 6px; height: 25px; background: #3e2723; border-radius: 2px; margin-top: -2px; }
+
+        /* Environment & Trees */
+        .tree-oak, .tree-pine, .tree-bushy { position: absolute; z-index: 60; }
+        .tree-oak { width: 70px; height: 75px; }
+        .oak-leaves { position: absolute; top: 0; width: 100%; height: 60px; background: radial-gradient(circle at 30% 30%, #2d4a2d, #1a2e1a); border-radius: 50% 50% 40% 40%; box-shadow: -5px 10px 15px rgba(0,0,0,0.4); }
+        .oak-leaves::before { content: ''; position: absolute; width: 40px; height: 40px; top: -10px; left: 15px; background: #223e22; border-radius: 50%; }
+        
+        .tree-pine { width: 50px; height: 85px; }
+        .pine-leaves { position: absolute; top: 0; width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-bottom: 70px solid #1a2e1a; filter: drop-shadow(-5px 5px 10px rgba(0,0,0,0.5)); }
+        .pine-leaves::after { content: ''; position: absolute; left: -15px; top: 20px; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 40px solid #2d4a2d; }
+        
+        .tree-bushy { width: 60px; height: 50px; }
+        .bushy-leaves { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle, #2d5a27, #1b3517); border-radius: 40% 60% 40% 50% / 60% 40% 50% 40%; box-shadow: inset 5px -5px 10px rgba(0,0,0,0.3); }
+        
+        .trunk { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 14px; height: 20px; background: #3e2723; border-radius: 2px; z-index: -1; }
+
+        .grass-tuft { position: absolute; width: 12px; height: 12px; }
+        .grass-blade { position: absolute; width: 2px; height: 10px; background: #3a5a3a; transform-origin: bottom; border-radius: 2px; }
+        
+        .deco-rock { 
+            position: absolute; background: #444a42; border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; 
+            box-shadow: inset -5px -5px 10px #1a1d12; border: 2px solid #2a2d22; z-index: 60; 
+        }
+
+        /* Paper Scraps */
+        .paper-scrap {
+            width: 14px; height: 18px;
+            background: #e8e8e0;
+            border: 1px solid #b0b0a0;
+            transform: rotate(15deg);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            z-index: 20;
+        }
+        .paper-scrap::after {
+            content: ''; position: absolute; top: 4px; left: 2px; width: 8px; height: 1px; 
+            background: #777; box-shadow: 0 3px 0 #777, 0 6px 0 #777;
+        }
+
+        .ritual-floor-container { z-index: 10; }
+        .stone-floor { width: 240px; height: 240px; background-color: #4a4a4a; background-image: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.3) 100%); border: 6px solid #2a2a2a; border-radius: 50%; box-shadow: inset 0 0 50px rgba(0,0,0,0.5); }
+        .pedestal-altar { width: 60px; height: 60px; background: #2a2a2a; border: 4px solid #1a1a1a; position: relative; box-shadow: 0 8px 0 #000; z-index: 35; }
+        .pedestal-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: radial-gradient(circle, #3498db, transparent 70%); animation: pulse-light 2s infinite alternate; }
+        @keyframes pulse-light { from { opacity: 0.3; scale: 1; } to { opacity: 0.8; scale: 1.4; } }
+        
+        /* Portal Door - Centered & Void Black */
+        .portal-door {
+            position: absolute; top: -50px; left: 0;
+            width: 60px; height: 100px;
+            background: #000;
+            border: 4px solid #2c2c24; 
+            border-radius: 50% 50% 0 0;
+            box-shadow: 0 0 40px #000;
+            z-index: 20;
+            display: none;
+            overflow: hidden;
+        }
+        .portal-door::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at bottom, #1a001a, #000 80%);
+            animation: void-depth 3s infinite alternate;
+        }
+        @keyframes void-depth { from { opacity: 0.7; } to { opacity: 1; } }
+
+        /* UI */
+        #interact-prompt { 
+            position: absolute; background: rgba(244, 201, 93, 0.95); color: #1b1b24; font-weight: bold; 
+            padding: 4px 12px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 999px; 
+            font-size: 14px;
+            z-index: 200; pointer-events: none; display: none; animation: bounce 1s infinite; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        
+        .ui-panel { 
+            position: absolute; background: var(--panel-bg); border: 1px solid var(--panel-border); 
+            padding: 20px; z-index: 1000; pointer-events: auto; border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+        }
+        
+        #flash-msg { 
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%); 
+            background: rgba(244, 201, 93, 0.95); color: #1b1b24;
+            padding: 10px 30px; border-radius: 999px; 
+            z-index: 2000; font-weight: bold; display: none; 
+            font-size: 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+        }
+
+        #run-timer {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        /* --- Cinematic skin (manual, non-AI look) --- */
+        #game-container {
+            border-color: rgba(214, 178, 94, 0.35);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+        }
+        #game-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            box-shadow: inset 0 0 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #interact-prompt {
+            background: linear-gradient(135deg, #f1d07a, #d6b25e);
+            border: 1px solid rgba(0,0,0,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 12px;
+        }
+
+        .ui-panel {
+            background: rgba(12, 14, 22, 0.94);
+            border: 1px solid rgba(214, 178, 94, 0.25);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+            background-image: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
+        }
+
+        #flash-msg {
+            background: rgba(214, 178, 94, 0.95);
+            border: 1px solid rgba(0,0,0,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 14px;
+        }
+
+        #inv-button {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        #inv-button:hover { background: rgba(214, 178, 94, 0.15); }
+        #inv-button:active { transform: translateY(1px); }
+
+        #dialog-name,
+        #cabinet-ui h2,
+        #inventory-ui h2,
+        #end-title {
+            font-family: 'Unbounded', sans-serif;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #f1d07a;
+        }
+
+        .inv-item-row { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .inv-item-row.selected { background: rgba(214, 178, 94, 0.12); border-left: 4px solid #d6b25e; }
+        
+        /* Inventory Styling */
+        .inv-item-row { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #333; cursor: pointer; transition: background 0.2s; }
+        .inv-item-row.selected { background: rgba(243, 156, 18, 0.2); border-left: 4px solid #f39c12; }
+        .inv-item-row.held { background: rgba(52, 152, 219, 0.1); }
+        .inv-icon { font-size: 24px; width: 40px; text-align: center; margin-right: 10px; }
+        .inv-info { flex: 1; }
+        .inv-name { font-weight: bold; font-size: 17px; color: #e5e5e5; } /* Increased */
+        .inv-desc { font-size: 14px; color: #888; font-style: italic; } /* Increased */
+        .inv-held-tag { font-size: 13px; color: #3498db; font-weight: bold; margin-left: 5px; } /* Increased */
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="world">
+        <!-- Đường mòn -->
+        <div class="path" style="left: 80px; top: 330px; width: 550px; height: 75px;"></div>
+        <div class="path" style="left: 375px; top: 100px; width: 70px; height: 260px;"></div>
+        
+        <div id="nature-layer" class="nature-layer"></div>
+
+        <div class="ritual-floor-container" style="position: absolute; left: 510px; top: 210px;"><div class="stone-floor"></div></div>
+        
+        <!-- Khu vực bệ đá và cổng -->
+        <div id="pedestal-area" class="entity" style="left: 600px; top: 300px;">
+            <div id="pedestal" class="pedestal-altar"><div class="pedestal-glow"></div></div>
+            <div id="portal" class="portal-door"></div>
+        </div>
+
+        <!-- 4 Ngọn đuốc -->
+        <div class="entity torch" style="left: 620px; top: 205px;"><div class="torch-flame"><div class="flame-layer flame-outer"></div><div class="flame-layer flame-inner"></div><div class="flame-layer flame-core"></div></div><div class="torch-stick"></div></div>
+        <div class="entity torch" style="left: 620px; top: 385px;"><div class="torch-flame"><div class="flame-layer flame-outer"></div><div class="flame-layer flame-inner"></div><div class="flame-layer flame-core"></div></div><div class="torch-stick"></div></div>
+        <div class="entity torch" style="left: 510px; top: 300px;"><div class="torch-flame"><div class="flame-layer flame-outer"></div><div class="flame-layer flame-inner"></div><div class="flame-layer flame-core"></div></div><div class="torch-stick"></div></div>
+        <div class="entity torch" style="left: 730px; top: 300px;"><div class="torch-flame"><div class="flame-layer flame-outer"></div><div class="flame-layer flame-inner"></div><div class="flame-layer flame-core"></div></div><div class="torch-stick"></div></div>
+
+        <div id="cabinet" class="entity cabinet-container" style="left: 100px; top: 120px;">
+            <div class="cabinet-body"><div class="cabinet-handle handle-left"></div><div class="cabinet-handle handle-right"></div><div class="cabinet-leg" style="left: 5px;"></div><div class="cabinet-leg" style="right: 5px;"></div></div>
+        </div>
+
+        <!-- Gương -->
+        <div id="mirror" class="entity mirror-container" style="left: 385px; top: 80px;">
+            <div class="mirror-stand"><div class="mirror-frame"><div class="mirror-glass"></div></div><div class="mirror-leg-base"></div></div>
+        </div>
+
+        <!-- NPC Descartes -->
+        <div id="descartes" class="entity" style="left: 180px; top: 260px; z-index: 50;">
+            <div class="char-name-tag">Descartes</div>
+            <div class="char-container">
+                <div class="hair"></div>
+                <div class="char-head" style="background: #e0e0e0;"></div>
+                <div class="collar"></div>
+                <div class="char-body">
+                    <div class="char-arm arm-left"></div><div class="char-arm arm-right"></div>
+                </div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+
+        <!-- Player -->
+        <div id="player" class="entity" style="left: 100px; top: 350px;">
+            <div class="char-name-tag" style="color: #3498db;">Lữ Khách</div>
+            <div id="player-sprite" class="char-container">
+                <div class="char-head"></div>
+                <div class="char-body">
+                    <div class="char-arm arm-left"></div><div class="char-arm arm-right"></div>
+                </div>
+                <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+            </div>
+        </div>
+
+        <div id="rock1" class="entity deco-rock" style="left: 480px; top: 150px; width: 60px; height: 45px;"></div>
+        <div id="rock2" class="entity deco-rock" style="left: 440px; top: 480px; width: 80px; height: 55px;"></div>
+        
+        <!-- Notes -->
+        <div id="note1" class="entity paper-scrap" style="left: 300px; top: 400px; transform: rotate(15deg);"></div>
+        <div id="note2" class="entity paper-scrap" style="left: 650px; top: 100px; transform: rotate(-10deg);"></div>
+        
+        <div id="interact-prompt">F</div>
+    </div>
+
+    <!-- UI -->
+    <div id="ui-layer">
+        <div id="run-timer">00:00</div>
+        <div id="flash-msg">THÔNG BÁO</div>
+        <button id="inv-button" type="button">Hành Trang [I]</button>
+        <div id="dialog-box" class="ui-panel bottom-10 left-1/2 -translate-x-1/2 w-[90%] hidden">
+            <div id="dialog-name" class="font-bold text-orange-400 mb-1 text-2xl">Hồi Ức</div>
+            <div id="dialog-text" class="text-gray-200 italic text-xl">...</div>
+            <div class="text-sm text-gray-500 mt-4 uppercase text-center font-bold tracking-widest">Nhấn F để tiếp tục</div>
+        </div>
+        
+        <div id="cabinet-ui" class="ui-panel top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] hidden">
+            <h2 class="text-2xl font-bold mb-4 text-orange-300 border-b border-gray-700 pb-2">Hòm Đá Cổ</h2>
+            <div id="cabinet-items-list" class="space-y-2 mb-2"></div>
+            <div id="cabinet-item-desc" class="text-lg text-gray-300 italic mb-4 h-10"></div>
+            <div class="flex justify-between text-sm text-gray-500 uppercase font-bold"><span>W/S: Chọn</span><span>F: Lấy</span><span>ESC: Đóng</span></div>
+        </div>
+        <div id="inventory-ui" class="ui-panel top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] hidden">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-2">Hành Trang</h2>
+            <div id="inventory-slots" class="flex flex-col space-y-1 mb-4"></div>
+            <div class="text-sm text-gray-500 uppercase font-bold tracking-tight text-center">W/S: Chọn | F: Cầm | I: Đóng</div>
+        </div>
+        <div id="game-over-screen" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-[9999] pointer-events-auto">
+            <h1 id="end-title" class="text-7xl font-serif font-bold text-red-800 mb-6 tracking-tighter">HƯ VÔ</h1>
+            <p id="end-msg" class="text-2xl italic text-gray-400 mb-12 text-center max-w-lg leading-relaxed">...</p>
+            <div id="end-hint" class="text-gray-500 text-lg uppercase tracking-widest animate-pulse">Ấn phím [F] để hồi sinh</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CONFIG = { speed: 1.2, interactDist: 75 };
+    const NAME_KEY = 'mln11PlayerName';
+    const RUN_START_KEY = 'mln11RunStart';
+
+    const INITIAL_STATE = {
+        player: { 
+            x: 100, y: 350, 
+            w: 40, h: 50,
+            hbW: 16, hbH: 8, hbOffX: 12, hbOffY: 50 
+        },
+        gameState: 'PLAYING',
+        inventory: [],
+        cabinetItems: [
+            { id: 'clock', name: 'Đồng hồ cát', icon: '⏳', isReal: false, mirrorChecked: false, desc: 'Cát vẫn chảy xuôi đều đặn, nhưng liệu thời gian có thực sự tồn tại bên ngoài tâm trí?' },
+            { id: 'candle', name: 'Cây nến', icon: '🕯️', isReal: false, mirrorChecked: false, desc: 'Một ngọn lửa nhỏ tỏa hơi ấm, nhưng đó có thể chỉ là ảo giác của giác quan.' },
+            { id: 'book', name: 'Bản thảo cổ', icon: '📜', isReal: true, mirrorChecked: false, desc: 'Cuốn sách có nội dung bị đảo ngược, thật khó đọc...' }
+        ],
+        interactables: [
+            { id: 'descartes', x: 180, y: 260, w: 40, h: 60 },
+            { id: 'cabinet', x: 100, y: 120, w: 50, h: 70 },
+            { id: 'mirror', x: 385, y: 80, w: 50, h: 100 },
+            { id: 'pedestal', x: 600, y: 300, w: 60, h: 60 },
+            { id: 'rock1', x: 480, y: 150, w: 60, h: 45, msg: "Một khối vật chất vô tri... hay chỉ là ý niệm về sự cứng rắn?" },
+            { id: 'rock2', x: 440, y: 480, w: 80, h: 55, msg: "Nó nằm đó, lẳng lặng tồn tại, hay chỉ tồn tại khi ta nhìn vào nó?" },
+            { id: 'note1', x: 300, y: 400, w: 20, h: 20, msg: "Mảnh giấy ghi: 'Giác quan thường đánh lừa ta. Chẳng hạn, khi nhìn chiếc gậy nhúng xuống nước, ta thấy nó gãy khúc. Vậy ta có nên tin vào đôi mắt?'" },
+            { id: 'note2', x: 650, y: 100, w: 20, h: 20, msg: "Mảnh giấy nát: 'Nếu có một con quỷ xảo quyệt đang dùng hết sức mạnh để đánh lừa ta rằng thế giới này tồn tại, liệu ta có đang bị lừa dối ngay lúc này?'" }
+        ],
+        selectedItemIndex: -1, 
+        previewItemIndex: -1,
+        cabinetSelectedIndex: 0,
+        dialogIndex: 0,
+        flags: { portalActive: false, selfReflected: false, win: false }
+    };
+
+    let state = JSON.parse(JSON.stringify(INITIAL_STATE));
+    const keys = {};
+    const dialogues = [
+        "Ngươi tin vào điều gì trong khu rừng này?",
+        "Hay tất cả chỉ là ảo giác của giác quan?",
+        "Ta hoài nghi tất cả. Mọi thứ xung quanh có thể chỉ là một con quỷ xảo quyệt tạo ra để lừa dối ta.",
+        "Muốn trốn thoát ư?",
+        "Ngươi cần phải tìm thứ thực sự tồn tại trong nơi này!"
+    ];
+
+    let obstacles = [];
+    let playerEl, playerSpriteEl, dialogBox, dialogText, cabinetUI, cabinetList, invUI, invSlots, flashMsg, portalEl, pedestalEl, gameOverScreen, interactPromptEl, cabinetDescEl;
+
+    function getPlayerName() {
+        const raw = localStorage.getItem(NAME_KEY);
+        if (!raw) return "";
+        const name = raw.trim();
+        return name.length ? name : "";
+    }
+
+    function applyPlayerName() {
+        const name = getPlayerName();
+        if (!name) return;
+        const tag = document.querySelector('#player .char-name-tag');
+        if (tag) tag.textContent = name;
+    }
+
+    function ensureRunStart() {
+        const current = Number(localStorage.getItem(RUN_START_KEY) || '0');
+        if (!current) {
+            localStorage.setItem(RUN_START_KEY, String(Date.now()));
+        }
+    }
+
+    function startRunTimer() {
+        const timerEl = document.getElementById('run-timer');
+        if (!timerEl) return;
+
+        ensureRunStart();
+
+        const tick = () => {
+            const start = Number(localStorage.getItem(RUN_START_KEY) || '0');
+            if (!start) {
+                timerEl.textContent = '00:00';
+                return;
+            }
+            const elapsed = Math.max(0, Date.now() - start);
+            const totalSec = Math.floor(elapsed / 1000);
+            const hours = Math.floor(totalSec / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            if (hours > 0) {
+                timerEl.textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        };
+
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    function init() {
+        playerEl = document.getElementById('player');
+        playerSpriteEl = document.getElementById('player-sprite');
+        dialogBox = document.getElementById('dialog-box');
+        dialogText = document.getElementById('dialog-text');
+        cabinetUI = document.getElementById('cabinet-ui');
+        cabinetList = document.getElementById('cabinet-items-list');
+        cabinetDescEl = document.getElementById('cabinet-item-desc');
+        invUI = document.getElementById('inventory-ui');
+        invSlots = document.getElementById('inventory-slots');
+        flashMsg = document.getElementById('flash-msg');
+        portalEl = document.getElementById('portal');
+        pedestalEl = document.getElementById('pedestal');
+        gameOverScreen = document.getElementById('game-over-screen');
+        interactPromptEl = document.getElementById('interact-prompt');
+        const invButton = document.getElementById('inv-button');
+
+        applyPlayerName();
+        ensureRunStart();
+        startRunTimer();
+        
+        obstacles = state.interactables.map(o => {
+            if(o.id.startsWith('note')) return null; // Skip notes, walk over them
+            if(o.id.startsWith('rock') || o.id === 'pedestal') {
+                return { x: o.x, y: o.y, w: o.w, h: o.h };
+            }
+            return { id: o.id, x: o.x, y: o.y, w: o.w, h: o.h };
+        }).filter(o => o !== null);
+
+        const nature = document.getElementById('nature-layer');
+        const trees = [
+            { x: 30, y: 40, type: 'oak', w: 70, h: 75 }, 
+            { x: 220, y: 420, type: 'pine', w: 50, h: 85 },
+            { x: 550, y: 20, type: 'oak', w: 70, h: 75 }, 
+            { x: 700, y: 480, type: 'bushy', w: 60, h: 50 },
+            { x: 300, y: 50, type: 'pine', w: 50, h: 85 }, 
+            { x: 40, y: 500, type: 'bushy', w: 60, h: 50 }
+        ];
+
+        trees.forEach(tp => {
+            const tEl = document.createElement('div');
+            tEl.className = `tree-${tp.type}`;
+            tEl.style.left = tp.x + 'px'; tEl.style.top = tp.y + 'px';
+            const leaves = document.createElement('div'); leaves.className = `${tp.type}-leaves`;
+            const trunk = document.createElement('div'); trunk.className = 'trunk';
+            tEl.appendChild(leaves); tEl.appendChild(trunk);
+            nature.appendChild(tEl);
+            
+            // FULL SOLID HITBOX
+            obstacles.push({
+                x: tp.x + 5, y: tp.y + 5, w: tp.w - 10, h: tp.h - 10
+            });
+        });
+
+        for(let i=0; i<150; i++) {
+            const tuft = document.createElement('div'); tuft.className='grass-tuft'; tuft.style.left=Math.random()*780+'px'; tuft.style.top=Math.random()*580+'px';
+            for(let j=0; j<3; j++) {
+                const b = document.createElement('div'); b.className='grass-blade'; b.style.left=(j*3)+'px'; b.style.height=(5+Math.random()*8)+'px';
+                b.style.transform=`rotate(${-20+Math.random()*40}deg)`; b.style.background=`hsl(100, 30%, ${20+Math.random()*20}%)`; tuft.appendChild(b);
+            }
+            nature.appendChild(tuft);
+        }
+
+        if (invButton) {
+            invButton.addEventListener('click', () => {
+                if (state.gameState === 'PLAYING') openInventory();
+                else if (state.gameState === 'INVENTORY') closeInventory();
+            });
+        }
+
+        window.addEventListener('keydown', e => { 
+            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
+            keys[e.code]=true; 
+            handleInput(e); 
+        });
+        window.addEventListener('keyup', e => { keys[e.code]=false; });
+        requestAnimationFrame(gameLoop);
+    }
+
+    function handleInput(e) {
+        if(state.gameState === 'GAMEOVER') {
+            if(e.code === 'KeyF') {
+                if (state.flags.win) window.location.href = 'level2.html';
+                else window.location.reload();
+            }
+            return;
+        }
+
+        if(e.code === 'KeyF') {
+            if(state.gameState === 'PLAYING') interact();
+            else if(state.gameState === 'DIALOG') nextDialog();
+            else if(state.gameState === 'INVENTORY') equipItem();
+            else if(state.gameState === 'LOOTING') lootItem();
+        }
+        if(state.gameState === 'LOOTING') {
+            if(e.code === 'KeyW' || e.code === 'ArrowUp') { state.cabinetSelectedIndex = Math.max(0, state.cabinetSelectedIndex-1); updateCabinetUI(); }
+            if(e.code === 'KeyS' || e.code === 'ArrowDown') { state.cabinetSelectedIndex = Math.min(state.cabinetItems.length-1, state.cabinetSelectedIndex+1); updateCabinetUI(); }
+        }
+        if(e.code === 'KeyI') {
+            if(state.gameState === 'PLAYING') openInventory();
+            else if(state.gameState === 'INVENTORY') closeInventory();
+        }
+        if(state.gameState === 'INVENTORY') {
+            if(e.code === 'KeyW' || e.code === 'ArrowUp') { 
+                state.previewItemIndex = Math.max(0, state.previewItemIndex - 1);
+                updateInventoryUI();
+            }
+            if(e.code === 'KeyS' || e.code === 'ArrowDown') {
+                state.previewItemIndex = Math.min(state.inventory.length - 1, state.previewItemIndex + 1);
+                updateInventoryUI();
+            }
+        }
+        if(e.code === 'Escape') { 
+            closeInventory(); cabinetUI.classList.add('hidden'); state.gameState = 'PLAYING';
+        }
+    }
+
+    function isColliding(nX, nY) {
+        const pHB = { x: nX + state.player.hbOffX, y: nY + state.player.hbOffY, w: state.player.hbW, h: state.player.hbH };
+        for (let obs of obstacles) {
+            if (pHB.x < obs.x + obs.w && pHB.x + pHB.w > obs.x &&
+                pHB.y < obs.y + obs.h && pHB.y + pHB.h > obs.y) {
+                return true; 
+            }
+        }
+        return false;
+    }
+
+    function interact() {
+        const p = state.player;
+        if(dist(p.x, p.y, 180, 260) < CONFIG.interactDist) { 
+            state.gameState = 'DIALOG'; state.dialogIndex = 0; dialogBox.classList.remove('hidden'); 
+            document.getElementById('dialog-name').textContent = "Descartes"; dialogText.textContent = dialogues[0]; 
+            return; 
+        }
+
+        if(dist(p.x, p.y, 100, 120) < CONFIG.interactDist) { state.gameState = 'LOOTING'; state.cabinetSelectedIndex = 0; cabinetUI.classList.remove('hidden'); updateCabinetUI(); return; }
+        if(dist(p.x, p.y, 385, 80) < CONFIG.interactDist) {
+            const h = state.inventory[state.selectedItemIndex];
+            if(h) {
+                h.mirrorChecked = true;
+                if(h.isReal) {
+                    h.desc = "Cogito, ergo sum - 'Tôi tư duy, nên tôi tồn tại'.";
+                    showFlash("Mặt gương lật lại sự thật: Những dòng chữ đã trở nên có nghĩa.");
+                } else {
+                    h.desc = "Chỉ là ảnh ảo, vô nghĩa trong gương.";
+                    showFlash("Gương mờ đục: Không có ảnh phản chiếu.");
+                }
+            } else if(state.flags.portalActive) { 
+                state.flags.selfReflected = true; 
+                showFlash("Bạn nhìn vào gương... Một bản thể đang tư duy nhìn lại bạn."); 
+            } else {
+                showFlash("Gương chỉ hiện lên làn sương mờ. Bạn chưa tìm thấy chân lý.");
+            }
+            return;
+        }
+
+        // Check Portal/Pedestal area (600, 300)
+        if(dist(p.x, p.y, 600, 300) < CONFIG.interactDist) {
+            if (state.flags.portalActive) {
+                 if(state.flags.selfReflected) finishGame(true);
+                 else finishGame(false);
+                 return;
+            }
+            
+            const h = state.inventory[state.selectedItemIndex];
+            if(h) {
+                if(!h.mirrorChecked) {
+                    showFlash("Bạn chưa kiểm chứng sự tồn tại của vật này. Hãy soi gương trước!");
+                } else if(h.isReal) {
+                    state.flags.portalActive = true; 
+                    state.inventory.splice(state.selectedItemIndex,1); 
+                    state.selectedItemIndex=-1;
+                    state.previewItemIndex = -1;
+                    pedestalEl.style.display = 'none';
+                    portalEl.style.display = 'block';
+                    showFlash("Bệ đá tan biến... Một cánh cửa hư không mở ra!");
+                } else {
+                    showFlash("Vật này chỉ là ảo giác, nó xuyên qua bệ đá như không khí.");
+                }
+            } else {
+                showFlash("Bệ đá đang chờ đợi một thực thể đã được kiểm chứng.");
+            }
+            return;
+        }
+        
+        for(let o of state.interactables) { if(o.msg && dist(p.x, p.y, o.x, o.y) < 65) { state.gameState = 'DIALOG'; dialogBox.classList.remove('hidden'); document.getElementById('dialog-name').textContent = "Cảm quan"; dialogText.textContent = o.msg; return; } }
+    }
+
+    function lootItem() {
+        if(state.cabinetItems.length > 0) {
+            const it = state.cabinetItems.splice(state.cabinetSelectedIndex, 1)[0];
+            state.inventory.push(it); state.cabinetSelectedIndex = Math.max(0, state.cabinetItems.length-1);
+            updateCabinetUI(); showFlash(`ĐÃ NHẬN: ${it.name.toUpperCase()}`);
+        }
+    }
+
+    function updateCabinetUI() {
+        cabinetList.innerHTML = state.cabinetItems.length ? '' : '<p class="text-gray-600 text-center font-bold">Hòm trống...</p>';
+        state.cabinetItems.forEach((it, i) => { cabinetList.innerHTML += `<div class="p-3 border border-gray-800 flex items-center ${i===state.cabinetSelectedIndex?'cabinet-selected':'bg-gray-900'}"><span class="mr-3 text-xl">${it.icon}</span><span class="font-bold">${it.name}</span></div>`; });
+        cabinetDescEl.textContent = state.cabinetItems[state.cabinetSelectedIndex]?.desc || "";
+    }
+
+    function openInventory() { state.gameState = 'INVENTORY'; if(state.previewItemIndex === -1 && state.inventory.length > 0) state.previewItemIndex = 0; invUI.classList.remove('hidden'); updateInventoryUI(); }
+    function focusInventoryItem(idx) { if(state.inventory[idx]) { state.previewItemIndex = idx; updateInventoryUI(); } }
+    function equipItem() { if(state.inventory[state.previewItemIndex]) { state.selectedItemIndex = state.previewItemIndex; showFlash(`ĐANG CẦM: ${state.inventory[state.selectedItemIndex].name.toUpperCase()}`); closeInventory(); } }
+    function closeInventory() { state.gameState = 'PLAYING'; invUI.classList.add('hidden'); }
+    function nextDialog() {
+        if(document.getElementById('dialog-name').textContent !== "Descartes") { state.gameState='PLAYING'; dialogBox.classList.add('hidden'); return; }
+        state.dialogIndex++;
+        if(state.dialogIndex >= dialogues.length) { 
+            state.gameState='PLAYING'; dialogBox.classList.add('hidden');
+        } else dialogText.textContent = dialogues[state.dialogIndex];
+    }
+    function updateInventoryUI() {
+        invSlots.innerHTML = '';
+        state.inventory.forEach((it, i) => { 
+            const isPrev = i===state.previewItemIndex, isHeld = i===state.selectedItemIndex; 
+            invSlots.innerHTML += `
+            <div class="inv-item-row ${isPrev?'selected':''} ${isHeld?'held':''}">
+                <div class="inv-icon">${it.icon}</div>
+                <div class="inv-info">
+                    <div class="inv-name">${it.name} ${isHeld ? '<span class="inv-held-tag">(Đang cầm)</span>' : ''}</div>
+                    <div class="inv-desc">${it.desc}</div>
+                </div>
+            </div>`; 
+        });
+    }
+
+    function showFlash(txt) { flashMsg.textContent=txt; flashMsg.style.display='block'; setTimeout(()=>flashMsg.style.display='none', 2500); }
+    function setProgress(level) {
+        const current = Number(localStorage.getItem('mln11Progress') || '0');
+        if (level > current) localStorage.setItem('mln11Progress', String(level));
+    }
+    function finishGame(win) {
+        state.gameState='GAMEOVER'; gameOverScreen.classList.remove('hidden');
+        state.flags.win = win;
+        if(win) { 
+            setProgress(1);
+            document.getElementById('end-title').textContent="TỒN TẠI"; document.getElementById('end-title').style.color = "#4ade80";
+            document.getElementById('end-msg').textContent="Cogito, ergo sum. Tôi tư duy, nên tôi tồn tại. Trong một thế giới đầy những ảo ảnh của giác quan, chỉ có ý thức về sự nghi ngờ là minh chứng duy nhất cho sự tồn tại của chính mình."; 
+            document.getElementById('end-hint').textContent = "Ấn phím [F] để qua màn tiếp theo";
+        } else { 
+            document.getElementById('end-title').textContent="HƯ VÔ"; document.getElementById('end-title').style.color = "#ef4444";
+            document.getElementById('end-msg').textContent="Bạn chưa kiểm chứng sự tồn tại của bản thân mình. Ai là kẻ đang bước đi qua cánh cổng?"; 
+            document.getElementById('end-hint').textContent = "Ấn phím [F] để hồi sinh";
+        }
+    }
+
+    function dist(x1, y1, x2, y2) { return Math.sqrt((x1-x2)**2 + (y1-y2)**2); }
+
+    function gameLoop() {
+        if(state.gameState === 'PLAYING') {
+            let dx = 0, dy = 0;
+            if(keys['KeyW'] || keys['ArrowUp']) dy -= CONFIG.speed; 
+            if(keys['KeyS'] || keys['ArrowDown']) dy += CONFIG.speed;
+            if(keys['KeyA'] || keys['ArrowLeft']) { dx -= CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(-1)'; }
+            if(keys['KeyD'] || keys['ArrowRight']) { dx += CONFIG.speed; playerSpriteEl.style.transform = 'scaleX(1)'; }
+
+            const nX = Math.max(0, Math.min(760, state.player.x + dx));
+            const nY = Math.max(0, Math.min(540, state.player.y + dy));
+            
+            if(!isColliding(nX, nY)) {
+                state.player.x = nX;
+                state.player.y = nY;
+            } else {
+                if(!isColliding(nX, state.player.y)) state.player.x = nX;
+                else if(!isColliding(state.player.x, nY)) state.player.y = nY;
+            }
+
+            if(dx !== 0 || dy !== 0) playerSpriteEl.classList.add('walking');
+            else playerSpriteEl.classList.remove('walking');
+
+            let closest = null, minDist = CONFIG.interactDist;
+            state.interactables.forEach(o => { const d = dist(state.player.x, state.player.y, o.x, o.y); if(d < minDist) { minDist=d; closest=o; } });
+            if(state.flags.portalActive) { const d = dist(state.player.x, state.player.y, 630, 330); if(d < minDist) { minDist=d; closest={x:630, y:330}; } }
+            
+            if(closest) { interactPromptEl.style.display='block'; interactPromptEl.style.left=(closest.x + 10)+'px'; interactPromptEl.style.top=(closest.y-35)+'px'; } else interactPromptEl.style.display='none';
+        }
+        playerEl.style.left = state.player.x + 'px'; playerEl.style.top = state.player.y + 'px';
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>

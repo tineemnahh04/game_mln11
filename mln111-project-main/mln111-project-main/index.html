@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLN111-GROUP 8</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --frame-border: rgba(255, 255, 255, 0.08);
+            --frame-shadow: 0 40px 120px rgba(0, 0, 0, 0.7);
+            --panel-bg: rgba(12, 14, 22, 0.94);
+            --panel-border: rgba(214, 178, 94, 0.25);
+            --accent: #f1d07a;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at top, #141a35 0%, #06070d 55%, #040409 100%);
+            font-family: 'Merriweather', serif;
+            color: #e6edf5;
+        }
+
+        #menu-container {
+            width: 960px;
+            height: 600px;
+            background: linear-gradient(140deg, #1b2034 0%, #0c0f1c 50%, #07090f 100%);
+            border: 1px solid var(--frame-border);
+            border-radius: 24px;
+            box-shadow: var(--frame-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #menu-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+            pointer-events: none;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            padding: 32px;
+            height: 100%;
+        }
+
+        .menu-single {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            height: 100%;
+        }
+
+        .menu-card {
+            width: min(520px, 90%);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .title {
+            font-family: 'Unbounded', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(8, 9, 16, 0.8);
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: #fff;
+            outline: none;
+        }
+
+        .start-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #f1d07a, #d6b25e);
+            border: 1px solid rgba(0, 0, 0, 0.35);
+            color: #1b1b24;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+
+        .start-btn:hover {
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        .start-btn:active {
+            transform: translateY(1px);
+        }
+
+        .back-btn {
+            width: 100%;
+            background: rgba(19, 23, 35, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e5e7eb;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            border-radius: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+
+        .back-btn:hover {
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        .back-btn:active {
+            transform: translateY(1px);
+        }
+
+        .leader-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .leader-rank {
+            color: var(--accent);
+            font-weight: bold;
+            width: 40px;
+        }
+
+        .leader-name {
+            flex: 1;
+            padding: 0 12px;
+            font-weight: bold;
+        }
+
+        .leader-time {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            color: #f1d07a;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .legacy-wrap {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 48px;
+        }
+
+        .legacy-panel {
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 18px;
+        }
+
+        .legacy-top {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #f1d07a;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+
+        .legacy-diamond {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #f1d07a;
+            transform: rotate(45deg);
+            display: inline-block;
+            box-shadow: 0 0 12px rgba(241, 208, 122, 0.35);
+        }
+
+        .legacy-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #eef2ff;
+            line-height: 1.1;
+        }
+
+        .legacy-subtitle {
+            color: #9aa3b2;
+            font-style: italic;
+            max-width: 640px;
+            line-height: 1.6;
+        }
+
+        .legacy-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .legacy-levels {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .legacy-btn {
+            border-radius: 999px;
+            padding: 10px 18px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .legacy-btn.primary {
+            background: linear-gradient(135deg, #f1d07a, #d6b25e);
+            border: 1px solid rgba(0, 0, 0, 0.35);
+            color: #1b1b24;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.35);
+            padding: 12px 22px;
+        }
+
+        .legacy-btn.secondary {
+            background: rgba(241, 208, 122, 0.15);
+            border: 1px solid rgba(241, 208, 122, 0.4);
+            color: #f5e7c0;
+        }
+
+        .legacy-btn.ghost {
+            background: rgba(19, 23, 35, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e5e7eb;
+        }
+
+        .legacy-btn:hover {
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+        }
+
+        .legacy-btn:active {
+            transform: translateY(1px);
+        }
+
+        .legacy-hint {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #8b93a7;
+            margin-top: 6px;
+        }
+
+        .legacy-hint .highlight {
+            color: #f1d07a;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(6, 7, 13, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+
+        .modal-card {
+            width: 560px;
+            background: rgba(12, 14, 22, 0.96);
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .modal-title {
+            font-family: 'Unbounded', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .modal-list {
+            color: #cbd5f5;
+            line-height: 1.7;
+            margin: 0 0 18px 0;
+            padding-left: 18px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #leaderboard-modal .modal-card {
+            width: min(680px, 92%);
+        }
+
+        #leaderboard-modal .leaderboard-title {
+            font-family: 'Unbounded', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        #leaderboard-modal .leaderboard-subtitle {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        #philosopher-modal {
+            position: absolute;
+            top: 120px;
+            right: 40px;
+            width: 320px;
+            background: rgba(10, 12, 20, 0.96);
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+            z-index: 3;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #philosopher-modal.hidden {
+            display: none;
+        }
+        #philosopher-modal .philo-title {
+            font-family: 'Unbounded', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        #philosopher-modal img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+        #philosopher-modal .philo-name {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #e5e7eb;
+        }
+        #philosopher-modal .philo-level {
+            color: #9aa3b2;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="menu-container">
+        <div id="legacy-menu" class="legacy-wrap">
+            <div class="legacy-panel">
+                <div class="legacy-top">
+                    <span class="legacy-diamond"></span>
+                    <span>MLN111-GROUP 8</span>
+                </div>
+                <h1 class="legacy-title">Mê Cung Triết Học</h1>
+                <p class="legacy-subtitle">
+                    Bước vào mê cung của hoài nghi và ánh sáng. Mỗi quyết định mở ra một tầng ý niệm,
+                    nơi chân lý chỉ lộ diện khi bạn dám nhìn thẳng vào chính mình.
+                </p>
+                <div class="legacy-actions">
+                    <button id="journey-btn" class="legacy-btn primary" type="button">Bắt đầu hành trình</button>
+                    <button id="leaderboard-btn" class="legacy-btn secondary" type="button">Bảng xếp hạng</button>
+                    <button id="guide-btn" class="legacy-btn secondary" type="button">Cách chơi</button>
+                </div>
+                <div class="legacy-levels">
+                    <button class="legacy-btn ghost level-btn" type="button"
+                        data-level="Màn 1" data-philosopher="René Descartes" data-image="level1.png">Màn 1</button>
+                    <button class="legacy-btn ghost level-btn" type="button"
+                        data-level="Màn 2" data-philosopher="Heraclitus" data-image="level2.png">Màn 2</button>
+                    <button class="legacy-btn ghost level-btn" type="button"
+                        data-level="Màn 3" data-philosopher="Plato" data-image="level3.png">Màn 3</button>
+                    <button class="legacy-btn ghost level-btn" type="button"
+                        data-level="Màn 4" data-philosopher="Hegel" data-image="level4.png">Màn 4</button>
+                    <button class="legacy-btn ghost level-btn" type="button"
+                        data-level="Màn 5" data-philosopher="Karl Marx" data-image="level5.png">Màn 5</button>
+                </div>
+                <div class="legacy-hint">
+                    Nhấn <span class="highlight">ENTER</span> để bắt đầu
+                </div>
+            </div>
+        </div>
+
+        <div id="new-menu" class="menu-single hidden">
+            <section class="panel menu-card">
+                <p class="title text-sm">Mê Cung Triết Học</p>
+                <h1 class="text-3xl font-bold mt-3">Menu</h1>
+                <p class="text-gray-400 mt-2 italic">Nhập tên để bắt đầu hành trình.</p>
+
+                <div class="mt-6 space-y-4">
+                    <button id="back-to-legacy" class="back-btn" type="button">Quay lại menu chính</button>
+                    <label class="text-sm text-gray-400">Tên người chơi</label>
+                    <input id="player-name" class="input-field" type="text" maxlength="20"
+                        placeholder="Nhập tên của bạn...">
+                    <p id="name-error" class="text-red-400 text-sm hidden">Vui lòng nhập tên trước khi bắt đầu.</p>
+                    <button id="start-btn" class="start-btn" type="button">Bắt đầu màn 1</button>
+                </div>
+
+                <div class="mt-6 text-xs text-gray-500">
+                    Thời gian được tính từ lúc vào Màn 1 đến khi hoàn thành Màn 5.
+                </div>
+            </section>
+        </div>
+
+        <div id="guide-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-title">Hướng dẫn chơi</div>
+                <ul class="modal-list">
+                    <li>Di chuyển: <strong>W/A/S/D</strong> hoặc phím mũi tên.</li>
+                    <li>Tương tác / nói chuyện / nhặt đồ: <strong>F</strong>.</li>
+                    <li>Mở hành trang: <strong>I</strong> (W/S để chọn, F để dùng/cầm).</li>
+                    <li>Thoát giao diện: <strong>ESC</strong>.</li>
+                    <li>Thời gian được tính từ khi vào Màn 1 đến khi hoàn thành Màn 5.</li>
+                </ul>
+                <div class="modal-actions">
+                    <button id="guide-close" class="legacy-btn ghost" type="button">Đóng [ESC]</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="leaderboard-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="leaderboard-title">Bảng xếp hạng</div>
+                <div class="leaderboard-subtitle">Những Người Chơi Khét Nhất Trong Mê Cung</div>
+                <div id="leaderboard-modal-empty" class="text-gray-500 mt-4 italic">Chưa có dữ liệu.</div>
+                <div id="leaderboard-modal-list" class="mt-4"></div>
+                <div class="modal-actions mt-6">
+                    <button id="leaderboard-close" class="legacy-btn ghost" type="button">Đóng [ESC]</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="philosopher-modal" class="hidden">
+            <div class="philo-title">Nhà Triết Học</div>
+            <img id="philo-image" alt="Philosopher portrait">
+            <div class="philo-name" id="philo-name">...</div>
+            <div class="philo-level" id="philo-level">...</div>
+        </div>
+    </div>
+
+    <script>
+        const NAME_KEY = 'mln11PlayerName';
+        const RUN_START_KEY = 'mln11RunStart';
+        const PROGRESS_KEY = 'mln11Progress';
+        const SUPABASE_URL = 'https://ttloqljdsfkrkzsuzwgz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0bG9xbGpkc2Zrcmt6c3V6d2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMzIzMjQsImV4cCI6MjA4NTcwODMyNH0.-AgPKBKeB_XWH6D8cThH5Iy2EBoYRnrF8NkhgK5Qy5g';
+        const SUPABASE_TABLES = ['leaderboard', 'leaderboards'];
+        const SUPABASE_HEADERS = {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        };
+
+        function formatDuration(ms) {
+            const totalSec = Math.max(0, Math.floor(ms / 1000));
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+            return `${m}m ${String(s).padStart(2, '0')}s`;
+        }
+
+        async function fetchLeaderboardRows() {
+            let lastError = null;
+            for (const table of SUPABASE_TABLES) {
+                const url = `${SUPABASE_URL}/rest/v1/${table}?select=*&limit=50`;
+                try {
+                    const res = await fetch(url, { headers: SUPABASE_HEADERS });
+                    if (res.ok) {
+                        const data = await res.json();
+                        return { data, table };
+                    }
+                    lastError = await res.text();
+                } catch (err) {
+                    lastError = err;
+                }
+            }
+            return { data: null, error: lastError };
+        }
+
+        function getEntryTimeMs(entry) {
+            const raw = entry.time_ms ?? entry.timeMs ?? entry.time ?? entry.duration ?? entry.elapsed ?? 0;
+            const value = Number(raw);
+            return Number.isFinite(value) ? value : 0;
+        }
+
+        function getEntryCreatedAt(entry) {
+            return entry.created_at ?? entry.createdAt ?? '';
+        }
+
+        function getEntryName(entry) {
+            return entry.name ?? entry.player_name ?? entry.playerName ?? 'Lữ Khách';
+        }
+
+        async function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-modal-list');
+            const empty = document.getElementById('leaderboard-modal-empty');
+            list.innerHTML = '';
+            empty.textContent = 'Đang tải bảng xếp hạng...';
+            empty.classList.remove('hidden');
+
+            const { data, error } = await fetchLeaderboardRows();
+
+            if (error) {
+                console.warn('Leaderboard fetch failed', error);
+                empty.textContent = 'Không tải được bảng xếp hạng.';
+                return;
+            }
+
+            const entries = Array.isArray(data) ? data : [];
+            if (!entries.length) {
+                empty.textContent = 'Chưa có dữ liệu.';
+                empty.classList.remove('hidden');
+                return;
+            }
+            entries.sort((a, b) => {
+                const diff = getEntryTimeMs(a) - getEntryTimeMs(b);
+                if (diff !== 0) return diff;
+                return String(getEntryCreatedAt(a)).localeCompare(String(getEntryCreatedAt(b)));
+            });
+            empty.classList.add('hidden');
+            entries.slice(0, 10).forEach((entry, idx) => {
+                const row = document.createElement('div');
+                row.className = 'leader-row';
+
+                const rank = document.createElement('span');
+                rank.className = 'leader-rank';
+                rank.textContent = `#${idx + 1}`;
+
+                const name = document.createElement('span');
+                name.className = 'leader-name';
+                name.textContent = getEntryName(entry);
+
+                const time = document.createElement('span');
+                time.className = 'leader-time';
+                time.textContent = formatDuration(getEntryTimeMs(entry));
+
+                row.appendChild(rank);
+                row.appendChild(name);
+                row.appendChild(time);
+                list.appendChild(row);
+            });
+        }
+
+        function startGame() {
+            const input = document.getElementById('player-name');
+            const error = document.getElementById('name-error');
+            const name = input.value.trim();
+            if (!name) {
+                error.classList.remove('hidden');
+                input.focus();
+                return;
+            }
+            error.classList.add('hidden');
+            localStorage.setItem(NAME_KEY, name);
+            localStorage.setItem(RUN_START_KEY, String(Date.now()));
+            localStorage.setItem(PROGRESS_KEY, '0');
+            window.location.href = 'level1.html';
+        }
+
+        const legacyMenu = document.getElementById('legacy-menu');
+        const newMenu = document.getElementById('new-menu');
+        const guideModal = document.getElementById('guide-modal');
+        const guideBtn = document.getElementById('guide-btn');
+        const guideClose = document.getElementById('guide-close');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardClose = document.getElementById('leaderboard-close');
+        const philosopherModal = document.getElementById('philosopher-modal');
+        const philoImage = document.getElementById('philo-image');
+        const philoName = document.getElementById('philo-name');
+        const philoLevel = document.getElementById('philo-level');
+        const levelButtons = document.querySelectorAll('.level-btn');
+        let philoHideTimeout = null;
+        function showNewMenu() {
+            legacyMenu.classList.add('hidden');
+            newMenu.classList.remove('hidden');
+        }
+        function showLegacyMenu() {
+            newMenu.classList.add('hidden');
+            legacyMenu.classList.remove('hidden');
+        }
+        document.getElementById('journey-btn').addEventListener('click', showNewMenu);
+        document.getElementById('back-to-legacy').addEventListener('click', showLegacyMenu);
+        window.addEventListener('keydown', (e) => {
+            if (legacyMenu.classList.contains('hidden')) return;
+            if (e.key === 'Enter') showNewMenu();
+        });
+        levelButtons.forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                if (philoHideTimeout) clearTimeout(philoHideTimeout);
+                const image = btn.getAttribute('data-image');
+                const name = btn.getAttribute('data-philosopher');
+                const level = btn.getAttribute('data-level');
+                philoImage.src = image;
+                philoImage.alt = name;
+                philoName.textContent = name;
+                philoLevel.textContent = level;
+                philosopherModal.classList.remove('hidden');
+            });
+            btn.addEventListener('mouseleave', () => {
+                philoHideTimeout = setTimeout(() => {
+                    philosopherModal.classList.add('hidden');
+                }, 200);
+            });
+        });
+        philosopherModal.addEventListener('mouseenter', () => {
+            if (philoHideTimeout) clearTimeout(philoHideTimeout);
+        });
+        philosopherModal.addEventListener('mouseleave', () => {
+            philosopherModal.classList.add('hidden');
+        });
+        guideBtn.addEventListener('click', () => {
+            guideModal.classList.remove('hidden');
+        });
+        guideClose.addEventListener('click', () => {
+            guideModal.classList.add('hidden');
+        });
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) guideModal.classList.add('hidden');
+        });
+        leaderboardBtn.addEventListener('click', () => {
+            leaderboardModal.classList.remove('hidden');
+            renderLeaderboard();
+        });
+        leaderboardClose.addEventListener('click', () => {
+            leaderboardModal.classList.add('hidden');
+        });
+        leaderboardModal.addEventListener('click', (e) => {
+            if (e.target === leaderboardModal) leaderboardModal.classList.add('hidden');
+        });
+        window.addEventListener('keydown', (e) => {
+            if (guideModal.classList.contains('hidden')) return;
+            if (e.key === 'Escape') guideModal.classList.add('hidden');
+        });
+        window.addEventListener('keydown', (e) => {
+            if (leaderboardModal.classList.contains('hidden')) return;
+            if (e.key === 'Escape') leaderboardModal.classList.add('hidden');
+        });
+
+        const nameInput = document.getElementById('player-name');
+        nameInput.value = localStorage.getItem(NAME_KEY) || '';
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startGame();
+        });
+
+        // leaderboard renders on demand
+    </script>
+</body>
+
+</html>

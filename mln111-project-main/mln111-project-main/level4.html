@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn 4 — Mê Cung Triết Học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --frame-bg: #06070d;
+            --frame-border: rgba(255, 255, 255, 0.08);
+            --frame-shadow: 0 40px 120px rgba(0, 0, 0, 0.7);
+            --panel-bg: rgba(12, 15, 30, 0.95);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent: #f4c95d;
+            --accent-2: #8bd3ff;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #141a35 0%, #06070d 55%, #040409 100%);
+            font-family: 'Merriweather', serif; 
+            color: #e6edf5;
+            user-select: none; /* Ngăn chọn văn bản khi click liên tục */
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0;
+            background-color: #0a0a0a;
+            border: 1px solid var(--frame-border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--frame-shadow);
+            outline: none;
+        }
+
+        /* --- Environment --- */
+        #world {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%);
+        }
+
+        .floor-pattern {
+            position: absolute;
+            width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.5;
+        }
+
+        /* --- Characters --- */
+        .entity {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: top 0.1s linear, left 0.1s linear;
+        }
+
+        /* --- Characters (Updated Model) --- */
+        .char-container { position: relative; width: 40px; height: 60px; z-index: 90; }
+        
+        .char-head { 
+            position: absolute; top: 2px; left: 11px; width: 18px; height: 18px; 
+            background: #f39c12; border: 1.5px solid #fff; border-radius: 50%; z-index: 15; 
+        }
+        .char-body { 
+            position: absolute; top: 18px; left: 8px; width: 24px; height: 26px; 
+            background: #2980b9; border: 2px solid #fff; border-radius: 4px; z-index: 10; 
+        }
+        .char-arm { 
+            position: absolute; width: 6px; height: 16px; 
+            background: #2980b9; border: 1px solid #fff; border-radius: 3px; top: 2px; 
+        }
+        .arm-left { left: -7px; transform-origin: top center; }
+        .arm-right { right: -7px; transform-origin: top center; }
+        
+        .char-leg { 
+            position: absolute; width: 8px; height: 14px; 
+            background: #1c5982; border: 1px solid #fff; border-radius: 3px; top: 42px; 
+        }
+        .leg-left { left: 11px; } .leg-right { right: 11px; }
+        
+        .walking .leg-left { animation: leg-swing 0.4s infinite alternate; }
+        .walking .leg-right { animation: leg-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-left { animation: arm-swing 0.4s infinite alternate-reverse; }
+        .walking .arm-right { animation: arm-swing 0.4s infinite alternate; }
+        @keyframes leg-swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+        @keyframes arm-swing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+
+        .char-name-tag {
+            position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 14px; font-weight: bold;
+            color: #f39c12; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 100;
+        }
+        
+        /* Player Colors */
+        #player .char-head { background: #f39c12; border: 1.5px solid #fff; }
+        #player .char-body { background: #2980b9; border: 2px solid #fff; }
+        #player .char-arm { background: #2980b9; border-color: #fff; }
+        #player .char-leg { background: #1c5982; border-color: #fff; }
+        #player .char-name-tag { color: #3498db; }
+
+        /* Hegel Colors */
+        #hegel .char-head { background: #f5f5f5; border: 1.5px solid #fff; } 
+        #hegel .char-body { background: #fff; border: 2px solid #ddd; } 
+        #hegel .char-arm { background: #fff; border-color: #ddd; }
+        #hegel .char-leg { background: #eee; border-color: #ddd; }
+        #hegel .char-name-tag { color: #f39c12; }
+        .hair-hegel {
+            position: absolute;
+            top: 0;
+            left: 8px;
+            width: 24px;
+            height: 18px;
+            background: #555;
+            border-radius: 50% 50% 0 0;
+            z-index: 14;
+        }
+        #hegel .char-head::after {
+            content: ''; position: absolute; bottom: -2px; left: 2px; width: 16px; height: 10px;
+            background: #f5f5f5; border-radius: 0 0 10px 10px; z-index: 21;
+        }
+
+        /* --- Objects --- */
+        .item-obj {
+            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            font-size: 24px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+            z-index: 5;
+        }
+        .decoy { opacity: 0.7; filter: grayscale(0.4) drop-shadow(0 0 4px rgba(255,255,255,0.15)); }
+
+        #paradox-door {
+            position: absolute;
+            width: 100px; height: 140px;
+            background: #000; border: 4px solid #555;
+            left: 400px; top: 60px; /* Starting pos */
+            transform: translateX(-50%);
+            z-index: 5;
+            box-shadow: 0 0 30px rgba(100,0,200,0.3);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: top 0.2s ease-out; /* Changed to match physics update better */
+        }
+        .door-symbol { font-family: 'Cinzel', serif; font-size: 40px; color: #333; }
+        .door-text { font-size: 10px; color: #555; margin-top: 10px; }
+
+        .clock-parts { font-size: 16px; position: absolute; }
+
+        .loop-door {
+            position: absolute;
+            width: 60px; height: 40px;
+            border: 2px solid #6b5b3e;
+            background: rgba(20, 18, 10, 0.9);
+            left: 420px; top: 320px;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 12px rgba(244, 201, 93, 0.25);
+            display: none;
+            z-index: 4;
+        }
+        .loop-door.open { border-color: #fbbf24; box-shadow: 0 0 18px rgba(251, 191, 36, 0.45); }
+        
+        /* UI */
+        #interact-prompt {
+            position: absolute; background: rgba(244, 201, 93, 0.95); color: #1b1b24; font-weight: bold;
+            padding: 4px 12px; border-radius: 999px; font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 200; display: none; animation: float-ui 1s infinite;
+            transform: translate(-50%, -100%); pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        }
+        @keyframes float-ui { 0% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, -115%); } }
+
+        .ui-panel {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--panel-bg); border: 1px solid var(--panel-border);
+            padding: 20px; color: #e6edf5; width: 500px; display: none; z-index: 1000;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+            font-family: 'Merriweather', serif;
+        }
+
+        #flash-msg {
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
+            background: rgba(244, 201, 93, 0.95); color: #1b1b24;
+            padding: 10px 24px; border-radius: 999px;
+            font-weight: bold; display: none; z-index: 2000;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+        }
+
+        #run-timer {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        /* --- Cinematic skin (manual, non-AI look) --- */
+        #game-container {
+            border-color: rgba(214, 178, 94, 0.35);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+        }
+        #game-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            box-shadow: inset 0 0 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #interact-prompt {
+            background: linear-gradient(135deg, #f1d07a, #d6b25e);
+            border: 1px solid rgba(0,0,0,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 12px;
+        }
+
+        .ui-panel {
+            background: rgba(12, 14, 22, 0.94);
+            border: 1px solid rgba(214, 178, 94, 0.25);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+            background-image: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
+        }
+
+        #flash-msg {
+            background: rgba(214, 178, 94, 0.95);
+            border: 1px solid rgba(0,0,0,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 14px;
+            color: #1b1b24;
+        }
+
+        #inv-button {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 2100;
+            background: rgba(12, 14, 22, 0.9);
+            color: #f1d07a;
+            border: 1px solid rgba(214, 178, 94, 0.35);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        #inv-button:hover { background: rgba(214, 178, 94, 0.15); }
+        #inv-button:active { transform: translateY(1px); }
+
+        #dialog-name,
+        #inventory-ui h2,
+        #end-screen h1 {
+            font-family: 'Unbounded', sans-serif;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #f1d07a;
+        }
+
+        .inv-row { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .inv-row.selected { background: rgba(214, 178, 94, 0.12); border-left: 3px solid #d6b25e; }
+
+        .inv-row { padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; }
+        .inv-row.selected { background: rgba(255,255,255,0.1); border-left: 3px solid #fbbf24; }
+
+        .inv-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .inv-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #fbbf24;
+            background: transparent;
+            color: #fbbf24;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .inv-btn:hover { background: rgba(251, 191, 36, 0.1); }
+        
+        .quote-wall {
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            font-family: 'Cinzel', serif; color: #444; font-size: 18px; pointer-events: none;
+            line-height: 1.6;
+        }
+        
+        .invisible { opacity: 0.3; filter: grayscale(100%); }
+
+        /* --- CSS Black Box --- */
+        .black-box-art {
+            position: relative;
+            width: 42px;
+            height: 36px;
+        }
+        .box-body {
+            position: absolute;
+            top: 6px;
+            left: 0;
+            width: 42px;
+            height: 30px;
+            background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 60%, #050505 100%);
+            border: 2px solid #2a2a2a;
+            border-radius: 3px;
+            box-shadow:
+                inset 0 0 10px rgba(0,0,0,0.8),
+                0 4px 12px rgba(0,0,0,0.6);
+        }
+        .box-lid {
+            position: absolute;
+            top: 0;
+            left: -2px;
+            width: 46px;
+            height: 10px;
+            background: linear-gradient(180deg, #222 0%, #111 100%);
+            border: 2px solid #2a2a2a;
+            border-radius: 3px 3px 0 0;
+        }
+        .box-lock {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 6px;
+            border: 1.5px solid #444;
+            border-radius: 2px;
+        }
+        .box-lock::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border: 1.5px solid #444;
+            border-radius: 50%;
+            background: transparent;
+        }
+        .box-question {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Unbounded', sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 0 0 6px rgba(80,80,80,0.3);
+            pointer-events: none;
+        }
+        .box-shadow-aura {
+            position: absolute;
+            inset: -6px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.3), transparent 70%);
+            border-radius: 6px;
+            pointer-events: none;
+        }
+
+        /* --- CSS Clock --- */
+        .clock-art {
+            position: relative;
+            width: 38px;
+            height: 50px;
+        }
+        .clock-body {
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 36px;
+            background: linear-gradient(145deg, #5c4015 0%, #3a2a0e 60%, #2a1b08 100%);
+            border: 2px solid #6b4f10;
+            border-radius: 4px 4px 2px 2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .clock-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 10px;
+            background: linear-gradient(180deg, #8b6914, #6b4f10);
+            border-radius: 10px 10px 0 0;
+            border: 2px solid #6b4f10;
+            border-bottom: none;
+        }
+        .clock-top::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 4px;
+            background: #d4a017;
+            border-radius: 3px 3px 0 0;
+        }
+        .clock-face {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #e8dcc8 0%, #c9b896 80%, #a89060 100%);
+            border: 1.5px solid #8b6914;
+            border-radius: 50%;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.2);
+        }
+        .clock-hand-h, .clock-hand-m {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            background: #2a1b08;
+            border-radius: 1px;
+        }
+        .clock-hand-h {
+            width: 2px;
+            height: 6px;
+            transform: translateX(-50%) rotate(-30deg);
+        }
+        .clock-hand-m {
+            width: 1.5px;
+            height: 8px;
+            transform: translateX(-50%) rotate(90deg);
+        }
+        .clock-center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 3px;
+            background: #2a1b08;
+            border-radius: 50%;
+        }
+        .clock-pendulum {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 10px;
+            background: #8b6914;
+            transform-origin: top center;
+            animation: pendulum-swing 1.5s ease-in-out infinite alternate;
+        }
+        .clock-pendulum::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, #d4a017, #8b6914);
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(212,160,23,0.4);
+        }
+        @keyframes pendulum-swing {
+            from { transform: translateX(-50%) rotate(-15deg); }
+            to { transform: translateX(-50%) rotate(15deg); }
+        }
+        .clock-foot-l, .clock-foot-r {
+            position: absolute;
+            bottom: -2px;
+            width: 6px;
+            height: 4px;
+            background: #3a2a0e;
+            border-radius: 0 0 2px 2px;
+        }
+        .clock-foot-l { left: 6px; }
+        .clock-foot-r { right: 6px; }
+
+        /* --- CSS Gear --- */
+        .gear-art {
+            position: relative;
+            width: 24px;
+            height: 24px;
+        }
+        .gear-body {
+            position: absolute;
+            inset: 3px;
+            background: radial-gradient(circle, #8b8b8b 0%, #5a5a5a 80%);
+            border-radius: 50%;
+            border: 2px solid #777;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .gear-body::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 5px;
+            height: 5px;
+            background: #333;
+            border-radius: 50%;
+            border: 1px solid #555;
+        }
+        .gear-teeth {
+            position: absolute;
+            inset: 0;
+        }
+        .gear-tooth {
+            position: absolute;
+            width: 4px;
+            height: 6px;
+            background: #6a6a6a;
+            border-radius: 1px;
+            left: 50%;
+            top: 0;
+            transform-origin: 50% 12px;
+            transform: translateX(-50%);
+        }
+        .gear-tooth:nth-child(2) { transform: translateX(-50%) rotate(45deg); }
+        .gear-tooth:nth-child(3) { transform: translateX(-50%) rotate(90deg); }
+        .gear-tooth:nth-child(4) { transform: translateX(-50%) rotate(135deg); }
+        .gear-tooth:nth-child(5) { transform: translateX(-50%) rotate(180deg); }
+        .gear-tooth:nth-child(6) { transform: translateX(-50%) rotate(225deg); }
+        .gear-tooth:nth-child(7) { transform: translateX(-50%) rotate(270deg); }
+        .gear-tooth:nth-child(8) { transform: translateX(-50%) rotate(315deg); }
+
+        /* Fake gear: duller */
+        .gear-art.decoy .gear-body {
+            background: radial-gradient(circle, #5a5a5a 0%, #3a3a3a 80%);
+            border-color: #4a4a4a;
+        }
+        .gear-art.decoy .gear-tooth { background: #444; }
+        .gear-art.decoy { opacity: 0.6; filter: grayscale(0.5); }
+
+        /* --- CSS Gold Thread Spool --- */
+        .thread-spool-art {
+            position: relative;
+            width: 34px;
+            height: 38px;
+        }
+        .spool-core {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 22px;
+            background: linear-gradient(180deg, #d4a017 0%, #b8860b 40%, #8b6914 100%);
+            border-radius: 3px;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+        /* Thread wrapping lines */
+        .spool-core::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(255,215,0,0.5) 0px,
+                rgba(255,215,0,0.5) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            border-radius: 2px;
+        }
+        .spool-core::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 6px;
+            height: 8px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent);
+            border-radius: 2px;
+        }
+        .spool-cap-top, .spool-cap-bottom {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 26px;
+            height: 6px;
+            background: linear-gradient(180deg, #6b4f10, #3a2a0e);
+            border-radius: 3px;
+        }
+        .spool-cap-top { top: 4px; }
+        .spool-cap-bottom { bottom: 4px; }
+        /* Loose thread tail */
+        .spool-thread-tail {
+            position: absolute;
+            top: 10px;
+            right: 0px;
+            width: 12px;
+            height: 20px;
+            border: none;
+            border-right: 2px solid #ffd700;
+            border-bottom: 2px solid #ffd700;
+            border-radius: 0 0 10px 0;
+            opacity: 0.7;
+        }
+        .spool-thread-tail::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 4px;
+            height: 4px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+        }
+        .spool-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, rgba(255,215,0,0.12), transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* --- CSS Mirror --- */
+        .mirror-art {
+            position: relative;
+            width: 36px;
+            height: 52px;
+        }
+        .mirror-frame {
+            position: absolute;
+            inset: 0;
+            border: 3px solid #b8860b;
+            border-radius: 18px 18px 4px 4px;
+            background: linear-gradient(165deg, #4a6d8c 0%, #1a2a3a 40%, #0d1520 100%);
+            box-shadow:
+                inset 0 0 12px rgba(139, 211, 255, 0.15),
+                0 0 8px rgba(184, 134, 11, 0.3);
+            overflow: hidden;
+        }
+        .mirror-frame::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 12px;
+            height: 24px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent);
+            border-radius: 8px 4px 12px 4px;
+        }
+        .mirror-frame::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, rgba(139,211,255,0.2), transparent);
+            border-radius: 50%;
+        }
+        .mirror-stand {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 8px;
+            background: #8b6914;
+        }
+        .mirror-base {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 22px;
+            height: 4px;
+            background: linear-gradient(90deg, #6b4f10, #b8860b, #6b4f10);
+            border-radius: 2px;
+        }
+        .mirror-ornament {
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: #d4a017;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(212, 160, 23, 0.5);
+        }
+
+        /* --- CSS Cloak Rack --- */
+        .cloak-rack-art {
+            position: relative;
+            width: 40px;
+            height: 56px;
+        }
+        .rack-pole {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 42px;
+            background: linear-gradient(180deg, #5c4015, #3a2a0e);
+            border-radius: 2px;
+        }
+        .rack-base {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 5px;
+            background: linear-gradient(90deg, #3a2a0e, #5c4015, #3a2a0e);
+            border-radius: 3px;
+        }
+        .rack-hook-l, .rack-hook-r {
+            position: absolute;
+            top: 6px;
+            width: 10px;
+            height: 3px;
+            background: #8b6914;
+            border-radius: 2px;
+        }
+        .rack-hook-l { left: 4px; transform: rotate(-15deg); }
+        .rack-hook-r { right: 4px; transform: rotate(15deg); }
+        .rack-hook-l::after, .rack-hook-r::after {
+            content: '';
+            position: absolute;
+            width: 3px;
+            height: 5px;
+            background: #8b6914;
+            border-radius: 0 0 3px 3px;
+        }
+        .rack-hook-l::after { right: 0; top: 2px; }
+        .rack-hook-r::after { left: 0; top: 2px; }
+        /* The cloak fabric draped on the rack */
+        .cloak-fabric {
+            position: absolute;
+            top: 8px;
+            left: 3px;
+            width: 34px;
+            height: 32px;
+            background: linear-gradient(180deg, #1a0a30 0%, #2d1650 40%, #1a0a30 100%);
+            border-radius: 6px 6px 12px 12px;
+            clip-path: polygon(15% 0%, 85% 0%, 100% 30%, 95% 100%, 50% 85%, 5% 100%, 0% 30%);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        .cloak-fabric::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 50%;
+        }
+        .cloak-fabric::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,0.25), transparent);
+        }
+        .cloak-shimmer {
+            position: absolute;
+            top: 12px;
+            left: 8px;
+            width: 6px;
+            height: 14px;
+            background: linear-gradient(180deg, rgba(139,92,246,0.15), transparent);
+            border-radius: 4px;
+            transform: rotate(-5deg);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container" tabindex="0">
+    <div id="world">
+        <div class="floor-pattern"></div>
+        <div class="quote-wall">
+            "PHỦ ĐỊNH CỦA PHỦ ĐỊNH LÀ SỰ THẬT.<br>CHỈ CÓ NỖI SỢ MỚI CÓ THỂ GIẾT CHẾT BẠN."
+        </div>
+    </div>
+
+    <!-- Objects -->
+    <div id="paradox-door">
+        <div class="door-symbol">Ø</div>
+        <div class="door-text">SỢ HÃI = CHẾT</div>
+    </div>
+
+    <div id="rack" class="entity" style="left: 100px; top: 200px;">
+        <div class="cloak-rack-art">
+            <div class="rack-hook-l"></div>
+            <div class="rack-hook-r"></div>
+            <div class="cloak-fabric">
+                <div class="cloak-shimmer"></div>
+            </div>
+            <div class="rack-pole"></div>
+            <div class="rack-base"></div>
+        </div>
+    </div>
+    <div id="mirror" class="entity" style="left: 170px; top: 200px;">
+        <div class="mirror-art">
+            <div class="mirror-ornament"></div>
+            <div class="mirror-frame"></div>
+            <div class="mirror-stand"></div>
+            <div class="mirror-base"></div>
+        </div>
+    </div>
+    
+    <div id="clock-base" class="entity" style="left: 700px; top: 500px;">
+        <div class="clock-art">
+            <div class="clock-top"></div>
+            <div class="clock-body">
+                <div class="clock-face">
+                    <div class="clock-hand-h"></div>
+                    <div class="clock-hand-m"></div>
+                    <div class="clock-center-dot"></div>
+                </div>
+                <div class="clock-pendulum"></div>
+            </div>
+            <div class="clock-foot-l"></div>
+            <div class="clock-foot-r"></div>
+        </div>
+    </div>
+    <!-- Clock parts scattered -->
+    <div id="gear1" class="entity" style="left: 650px; top: 520px;">
+        <div class="gear-art"><div class="gear-teeth"><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div></div><div class="gear-body"></div></div>
+    </div>
+    <div id="gear2" class="entity" style="left: 750px; top: 480px;">
+        <div class="gear-art"><div class="gear-teeth"><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div></div><div class="gear-body"></div></div>
+    </div>
+    <div id="fake-gear" class="entity" style="left: 720px; top: 540px;">
+        <div class="gear-art decoy"><div class="gear-teeth"><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div><div class="gear-tooth"></div></div><div class="gear-body"></div></div>
+    </div>
+
+    <div id="black-box" class="entity" style="left: 100px; top: 500px;">
+        <div class="black-box-art">
+            <div class="box-shadow-aura"></div>
+            <div class="box-lid"></div>
+            <div class="box-body">
+                <div class="box-lock"></div>
+                <div class="box-question">?</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="gold-thread" class="entity" style="left: 400px; top: 300px;">
+        <div class="thread-spool-art">
+            <div class="spool-glow"></div>
+            <div class="spool-cap-top"></div>
+            <div class="spool-core"></div>
+            <div class="spool-cap-bottom"></div>
+            <div class="spool-thread-tail"></div>
+        </div>
+    </div>
+    <div id="paradox-scroll" class="entity item-obj decoy" style="left: 560px; top: 430px;">📜</div>
+    <div id="fear-talisman" class="entity item-obj decoy" style="left: 250px; top: 460px;">🪬</div>
+    <div id="loop-door" class="loop-door"></div>
+
+    <!-- NPC G.W.F. Hegel -->
+    <div id="hegel" class="entity" style="left: 600px; top: 200px;">
+        <div class="char-name-tag">Hegel</div>
+        <div class="char-container">
+            <div class="hair-hegel"></div>
+            <div class="char-head"></div>
+            <div class="char-body">
+                <div class="char-arm arm-left"></div><div class="char-arm arm-right"></div>
+            </div>
+            <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+        </div>
+    </div>
+
+    <!-- Player -->
+    <div id="player" class="entity" style="left: 400px; top: 500px;">
+        <div class="char-name-tag">Lữ Khách</div>
+        <div id="player-model" class="char-container">
+            <div class="char-head"></div>
+            <div class="char-body">
+                <div class="char-arm arm-left"></div><div class="char-arm arm-right"></div>
+            </div>
+            <div class="char-leg leg-left"></div><div class="char-leg leg-right"></div>
+        </div>
+    </div>
+
+    <div id="interact-prompt">F</div>
+
+    <!-- UI -->
+    <div id="run-timer">00:00</div>
+    <div id="flash-msg"></div>
+    <button id="inv-button" type="button">Hành Trang [I]</button>
+
+    <div id="dialog-box" class="ui-panel" style="top: auto; bottom: 20px; transform: translateX(-50%); width: 700px;">
+        <h3 id="dialog-name" class="font-bold text-yellow-500 mb-2 font-serif">Hegel</h3>
+        <p id="dialog-text" class="italic text-gray-300">...</p>
+        <p class="text-xs text-gray-500 mt-4 text-right">[F] Tiếp tục</p>
+    </div>
+
+    <div id="inventory-ui" class="ui-panel">
+        <h2 class="text-xl font-bold mb-4 text-yellow-500 text-center font-serif">TÂM TRÍ</h2>
+        <div id="inv-list" class="mb-4 max-h-40 overflow-y-auto border-t border-b border-gray-700"></div>
+        <div class="text-xs text-center text-gray-500">W/S: Chọn | F: Suy ngẫm/Dùng | I: Đóng</div>
+        <div class="inv-actions">
+            <button id="inv-use" class="inv-btn" type="button">Sử dụng</button>
+        </div>
+    </div>
+
+    <div id="end-screen" class="hidden absolute inset-0 bg-black flex flex-col items-center justify-center z-[9999]">
+        <h1 id="end-title" class="text-7xl font-serif font-bold text-emerald-400 mb-6 tracking-tighter">GIÁC NGỘ</h1>
+        <p id="end-msg" class="text-xl italic text-gray-400 mb-12 text-center max-w-lg leading-relaxed">
+            "Bạn đã đi lùi để tiến tới. Bạn đã phủ định chính mình để tìm thấy bản ngã. Cánh cửa sự thật đã mở."
+        </p>
+        <div id="end-hint" class="text-gray-500 text-lg uppercase tracking-widest animate-pulse">Ấn phím [F] để qua màn tiếp theo</div>
+    </div>
+</div>
+
+<script>
+    const DEBUG_UNLOCK_LEVEL4 = false;
+    const progress = Number(localStorage.getItem('mln11Progress') || '0');
+    if (!DEBUG_UNLOCK_LEVEL4 && progress < 3) window.location.href = 'index.html';
+    const NAME_KEY = 'mln11PlayerName';
+    const RUN_START_KEY = 'mln11RunStart';
+    /* --- CONFIG & STATE --- */
+    const CONFIG = { speed: 3, interactDist: 70 };
+    
+    const STATE = {
+        player: { x: 400, y: 500 },
+        door: { x: 400, y: 60, targetY: 60 },
+        inventory: [],
+        selectedInv: 0,
+        uiState: 'NONE',
+        flags: {
+            hasCloak: false,
+            wearingCloak: false,
+            clockParts: 0,
+            clockFixed: false,
+            clockRepaired: false,
+            boxSolved: false,
+            boxQuestioned: false,
+            threadCut: false,
+            threadCount: 0,
+            threadAccepted: false,
+            threadHatchShown: false,
+            doorOpen: false,
+            doorStepBack: false,
+            mirrorTruthFound: false,
+            cloakFoundTruth: false
+        },
+        objs: [
+            { id: 'hegel', x: 600, y: 200, name: 'Hegel' },
+            { id: 'rack', x: 100, y: 200, name: 'Giá Áo' },
+            { id: 'mirror', x: 170, y: 200, name: 'Gương Soi' },
+            { id: 'clock-base', x: 700, y: 500, name: 'Cỗ Máy Thời Gian' },
+            { id: 'gear1', x: 650, y: 520, name: 'Mảnh vỡ thời gian' },
+            { id: 'gear2', x: 750, y: 480, name: 'Mảnh vỡ ký ức' },
+            { id: 'fake-gear', x: 720, y: 540, name: 'Mảnh vỡ rỗng' },
+            { id: 'black-box', x: 100, y: 500, name: 'Hộp Đen' },
+            { id: 'gold-thread', x: 400, y: 300, name: 'Chỉ Vàng' },
+            { id: 'paradox-scroll', x: 560, y: 430, name: 'Trang Ghi Mâu Thuẫn' },
+            { id: 'fear-talisman', x: 250, y: 460, name: 'Bùa Sợ Hãi' },
+            { id: 'paradox-door', x: 400, y: 60, name: 'Cánh Cửa' }
+        ]
+    };
+
+    const hegelDialogues = [
+        "Chào mừng đến với Nghịch lý. Phủ định không hủy diệt; nó hé lộ bản chất mới.",
+        "Cánh cửa lùi xa khi bạn tiến tới vì nỗi sợ phản chiếu chính bạn. Hãy thử lùi lại — để hiểu.",
+        "Áo choàng khiến bạn vô hình trong gương: đấy là phủ định. Chấp nhận vô hình để thấy bản ngã.",
+        "Cỗ máy thời gian không đo đếm thực tại mà chỉ phản chiếu khuôn khổ nhận thức; lắp ghép mảnh vỡ để hiểu giới hạn.",
+        "Chỉ vàng tự nối lại: vòng lặp vĩnh cửu. Không phải để khuất phục, mà để học và chấp nhận."
+    ];
+    let dialogIdx = 0;
+
+    const keys = {};
+    let flashTimeout;
+
+    // DOM Elements
+    let playerEl, playerModel, doorEl, promptEl, dialogEl, invEl;
+
+    function applyPlayerName() {
+        const raw = localStorage.getItem(NAME_KEY);
+        if (!raw) return;
+        const name = raw.trim();
+        if (!name) return;
+        const tag = document.querySelector('#player .char-name-tag');
+        if (tag) tag.textContent = name;
+    }
+
+    function ensureRunStart() {
+        const current = Number(localStorage.getItem(RUN_START_KEY) || '0');
+        if (!current) {
+            localStorage.setItem(RUN_START_KEY, String(Date.now()));
+        }
+    }
+
+    function startRunTimer() {
+        const timerEl = document.getElementById('run-timer');
+        if (!timerEl) return;
+
+        ensureRunStart();
+
+        const tick = () => {
+            const start = Number(localStorage.getItem(RUN_START_KEY) || '0');
+            if (!start) {
+                timerEl.textContent = '00:00';
+                return;
+            }
+            const elapsed = Math.max(0, Date.now() - start);
+            const totalSec = Math.floor(elapsed / 1000);
+            const hours = Math.floor(totalSec / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            if (hours > 0) {
+                timerEl.textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        };
+
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    /* --- INITIALIZATION --- */
+    function init() {
+        playerEl = document.getElementById('player');
+        playerModel = document.getElementById('player-model');
+        doorEl = document.getElementById('paradox-door');
+        promptEl = document.getElementById('interact-prompt');
+        dialogEl = document.getElementById('dialog-box');
+        invEl = document.getElementById('inventory-ui');
+        const invUseBtn = document.getElementById('inv-use');
+        const invButton = document.getElementById('inv-button');
+        applyPlayerName();
+        startRunTimer();
+        if (invUseBtn) invUseBtn.addEventListener('click', useItem);
+        if (invButton) {
+            invButton.addEventListener('click', () => {
+                if (STATE.uiState === 'NONE' || STATE.uiState === 'INVENTORY') {
+                    toggleInventory();
+                }
+            });
+        }
+
+        document.getElementById('game-container').focus();
+
+        window.addEventListener('keydown', e => {
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
+            keys[e.code] = true;
+            handleInput(e.code);
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        requestAnimationFrame(loop);
+    }
+
+    /* --- INPUT HANDLING --- */
+    function handleInput(code) {
+        if (STATE.uiState === 'GAMEOVER') {
+            if (code === 'KeyF') window.location.href = 'level5.html';
+            return;
+        }
+        if (STATE.uiState === 'DIALOG') {
+            if (code === 'KeyF') {
+                closeDialog();
+            }
+            return;
+        }
+
+        if (STATE.uiState === 'INVENTORY') {
+            if (code === 'KeyI' || code === 'Escape') toggleInventory();
+            if (code === 'KeyW' || code === 'ArrowUp') {
+                STATE.selectedInv = Math.max(0, STATE.selectedInv - 1);
+                renderInventory();
+            }
+            if (code === 'KeyS' || code === 'ArrowDown') {
+                STATE.selectedInv = Math.min(STATE.inventory.length - 1, STATE.selectedInv + 1);
+                renderInventory();
+            }
+            if (code === 'KeyF') useItem();
+            return;
+        }
+
+        if (STATE.uiState === 'NONE') {
+            if (code === 'KeyF') interact();
+            if (code === 'KeyI') toggleInventory();
+        }
+    }
+
+    /* --- GAME LOOP --- */
+    function loop() {
+        // Chỉ chạy loop di chuyển khi không ở trong UI (Dialogue/Inventory)
+        if (STATE.uiState === 'NONE') {
+            let dx = 0, dy = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const length = Math.sqrt(dx*dx + dy*dy);
+                dx = (dx / length) * CONFIG.speed;
+                dy = (dy / length) * CONFIG.speed;
+                
+                playerModel.classList.add('walking');
+                if (dx < 0) playerModel.style.transform = "scaleX(-1)";
+                if (dx > 0) playerModel.style.transform = "scaleX(1)";
+            } else {
+                playerModel.classList.remove('walking');
+            }
+
+            STATE.player.x = Math.max(20, Math.min(780, STATE.player.x + dx));
+            STATE.player.y = Math.max(20, Math.min(580, STATE.player.y + dy));
+
+            // Logic Cửa Đảo Ngược
+            if (!STATE.flags.doorOpen) {
+                if (dy < 0 && STATE.player.y < 300) { // Đi tới
+                    STATE.door.y = Math.max(-50, STATE.door.y - 1.8);
+                } else if (dy > 0 && STATE.door.y < 100) { // Đi lùi
+                    STATE.door.y += 1.5;
+                }
+            } else {
+                STATE.door.y = 100;
+            }
+
+            if (!STATE.flags.doorStepBack && dy > 0 && STATE.player.y < 280) {
+                STATE.flags.doorStepBack = true;
+                showFlash("Bạn đã đi lùi một bước.");
+            }
+            
+            playerEl.style.left = STATE.player.x + 'px';
+            playerEl.style.top = STATE.player.y + 'px';
+            doorEl.style.top = STATE.door.y + 'px';
+            
+            // Cập nhật hitbox cửa
+            const doorObj = STATE.objs.find(o => o.id === 'paradox-door');
+            if(doorObj) doorObj.y = STATE.door.y + 70;
+
+            const target = getClosestInteractable();
+            if (target) {
+                promptEl.style.display = 'block';
+                promptEl.style.left = target.x + 'px';
+                promptEl.style.top = (target.y - 40) + 'px';
+            } else {
+                promptEl.style.display = 'none';
+            }
+        }
+        
+        requestAnimationFrame(loop);
+    }
+
+    /* --- INTERACTIONS --- */
+    function getClosestInteractable() {
+        let t = null;
+        let min = CONFIG.interactDist;
+        STATE.objs.forEach(i => {
+            const d = dist(STATE.player.x, STATE.player.y, i.x, i.y);
+            if (d < min) { min = d; t = i; }
+        });
+        return t;
+    }
+
+    function interact() {
+        const target = getClosestInteractable();
+        if (!target) return;
+
+        if (target.id === 'hegel') {
+            showDialog("Hegel", hegelDialogues[dialogIdx]);
+            if (dialogIdx < hegelDialogues.length - 1) dialogIdx++;
+        }
+        else if (target.id === 'rack') {
+            if (!STATE.flags.hasCloak) {
+                STATE.flags.hasCloak = true;
+                addToInv('cloak', 'Áo Choàng Vô Hình', '<span style="display:inline-block;width:16px;height:20px;background:linear-gradient(180deg,#1a0a30,#2d1650);border-radius:3px 3px 6px 6px;clip-path:polygon(20% 0%,80% 0%,100% 30%,90% 100%,50% 85%,10% 100%,0% 30%);"></span>', 'Phủ định sự hiện diện của bản thân.');
+                showFlash("Đã lấy: Áo Choàng.");
+                const fabric = document.querySelector('#rack .cloak-fabric');
+                if (fabric) fabric.style.display = 'none';
+                const shimmer = document.querySelector('#rack .cloak-shimmer');
+                if (shimmer) shimmer.style.display = 'none';
+            } else {
+                showDialog("Giá Treo", "Trống rỗng.");
+            }
+        }
+        else if (target.id === 'mirror') {
+            if (STATE.flags.cloakFoundTruth || STATE.flags.mirrorTruthFound) {
+                showDialog("Gương", "Bạn không thấy mình — chỉ còn một khoảng tối. Đây là dấu hiệu của phủ định.");
+            } else {
+                showDialog("Gương", "Bạn nhìn thấy hình ảnh phản chiếu của mình. Vẫn là bạn, chưa có gì thay đổi.");
+            }
+        }
+        else if (target.id === 'clock-base') {
+            if (!STATE.flags.clockFixed && !STATE.flags.clockRepaired) {
+                if (STATE.flags.clockParts >= 2) {
+                    STATE.flags.clockFixed = true;
+                    STATE.flags.clockRepaired = true;
+                    showFlash("Đã sửa đồng hồ");
+                    showDialog("Cỗ Máy", "Kim đồng hồ quay ngược. Thời gian chỉ là ảo giác của nhận thức.");
+                    document.getElementById('clock-base').style.filter = "sepia(1)";
+                } else {
+                    showDialog("Cỗ Máy", "Nó vỡ tan. Cần tìm 2 mảnh vỡ để khôi phục.");
+                }
+            } else {
+                showDialog("Cỗ Máy", "Nó đang đếm những khoảnh khắc vô tận.");
+            }
+        }
+        else if (target.id === 'gear1' || target.id === 'gear2') {
+            STATE.flags.clockParts = (STATE.flags.clockParts || 0) + 1;
+            document.getElementById(target.id).style.display = 'none';
+            STATE.objs = STATE.objs.filter(o => o.id !== target.id);
+            showFlash("Đã nhặt mảnh vỡ thời gian");
+            if (STATE.flags.clockParts >= 2) showFlash("Đủ mảnh vỡ. Hãy sửa cỗ máy thời gian.");
+        }
+        else if (target.id === 'fake-gear') {
+            addToInv('fake_gear', 'Mảnh vỡ rỗng', '<span style="display:inline-block;width:14px;height:14px;background:radial-gradient(circle,#5a5a5a,#3a3a3a);border-radius:50%;border:1.5px solid #4a4a4a;"></span>', 'Một bánh răng trơ trọi, không khớp vào cỗ máy.');
+            document.getElementById(target.id).style.display = 'none';
+            STATE.objs = STATE.objs.filter(o => o.id !== target.id);
+            showFlash("Nhặt được một mảnh vỡ lạ...");
+        }
+        else if (target.id === 'black-box') {
+            STATE.flags.boxQuestioned = true;
+            STATE.flags.boxSolved = true;
+            showDialog("Hộp Đen", "Bên trong chỉ là bóng tối. Sự hoài nghi là khởi đầu của tri thức.");
+        }
+        else if (target.id === 'gold-thread') {
+            STATE.flags.threadCount = (STATE.flags.threadCount || 0) + 1;
+            const loopDoorEl = document.getElementById('loop-door');
+            if (!STATE.flags.threadHatchShown) {
+                STATE.flags.threadHatchShown = true;
+                loopDoorEl.style.display = 'block';
+            }
+            if (STATE.flags.threadCount < 3) {
+                showFlash("Cắt chỉ... Nó tự nối lại!");
+            } else {
+                STATE.flags.threadAccepted = true;
+                loopDoorEl.classList.add('open');
+                showDialog("Cuộn Chỉ", "Vòng lặp vĩnh cửu. Bạn chấp nhận rằng mọi thứ sẽ lặp lại.");
+            }
+        }
+        else if (target.id === 'paradox-scroll') {
+            addToInv('paradox_scroll', 'Trang Ghi Mâu Thuẫn', '📜', '“Tiến lên là lối thoát”, nhưng liệu có thật?');
+            document.getElementById(target.id).style.display = 'none';
+            STATE.objs = STATE.objs.filter(o => o.id !== target.id);
+            showDialog("Trang Ghi", "Dòng chữ run rẩy: “Đừng lùi lại, hãy tiến lên.”");
+        }
+        else if (target.id === 'fear-talisman') {
+            addToInv('fear_talisman', 'Bùa Sợ Hãi', '🪬', 'Một vật trấn yểm gieo hoang mang.');
+            document.getElementById(target.id).style.display = 'none';
+            STATE.objs = STATE.objs.filter(o => o.id !== target.id);
+            showDialog("Bùa Sợ Hãi", "Nó thì thầm rằng nỗi sợ mới là chân lý. Bạn có tin không?");
+        }
+        else if (target.id === 'paradox-door') {
+            const allSolved = (STATE.flags.clockFixed || STATE.flags.clockRepaired) && STATE.flags.boxQuestioned &&
+                             STATE.flags.threadAccepted && (STATE.flags.cloakFoundTruth || STATE.flags.mirrorTruthFound) &&
+                             STATE.flags.doorStepBack;
+
+            if (allSolved) {
+                STATE.flags.doorOpen = true;
+                STATE.uiState = 'GAMEOVER';
+                setProgress(4);
+                document.getElementById('end-screen').classList.remove('hidden');
+            } else {
+                if (!STATE.flags.doorStepBack) {
+                    showDialog("Cánh Cửa", "Cánh cửa vẫn lùi xa. Hãy thử đi lùi để đối diện điều đã bỏ qua.");
+                } else {
+                    showDialog("Cánh Cửa", "Cửa không mở. Cần giải quyết hết các nghịch lý trong phòng.");
+                }
+            }
+        }
+    }
+
+    function useItem() {
+        const item = STATE.inventory[STATE.selectedInv];
+        if (!item) return;
+
+        if (item.id === 'cloak') {
+            // Hide inventory UI and consume cloak if used correctly
+            STATE.uiState = 'NONE';
+            invEl.style.display = 'none';
+
+            const distToMirror = dist(STATE.player.x, STATE.player.y, 170, 200);
+            if (distToMirror < 100) {
+                STATE.flags.cloakFoundTruth = true;
+                STATE.flags.mirrorTruthFound = true;
+                // Visually reduce player's opacity to indicate 'invisibility'
+                playerModel.style.opacity = '0.45';
+                showDialog("Bản Ngã", "Bạn mặc áo choàng và nhìn vào gương. Hình ảnh biến mất! Bạn đã phủ định bản thân để tìm thấy sự thật.");
+                removeItem('cloak');
+            } else {
+                showFlash("Bạn phải đứng trước gương để thấy tác dụng của áo choàng.");
+            }
+        }
+        else if (item.id === 'fake_gear') {
+            STATE.uiState = 'NONE';
+            invEl.style.display = 'none';
+            showFlash("Mảnh vỡ này không khớp với cỗ máy.");
+        }
+        else if (item.id === 'paradox_scroll') {
+            STATE.uiState = 'NONE';
+            invEl.style.display = 'none';
+            showDialog("Trang Ghi", "“Sự thật nằm trước mắt.” Nhưng đôi khi, lùi lại mới thấy rõ.");
+        }
+        else if (item.id === 'fear_talisman') {
+            STATE.uiState = 'NONE';
+            invEl.style.display = 'none';
+            showDialog("Bùa Sợ Hãi", "Nỗi sợ phóng đại mọi thứ. Chỉ khi vượt qua nó, bạn mới thấy lối đi.");
+        }
+    }
+
+    /* --- Utils --- */
+    function addToInv(id, name, icon, desc) {
+        STATE.inventory.push({id, name, icon, desc});
+    }
+
+    function removeItem(id) {
+        STATE.inventory = STATE.inventory.filter(i => i.id !== id);
+    }
+
+    function toggleInventory() {
+        if (STATE.uiState === 'INVENTORY') {
+            STATE.uiState = 'NONE';
+            invEl.style.display = 'none';
+        } else {
+            STATE.uiState = 'INVENTORY';
+            invEl.style.display = 'block';
+            renderInventory();
+        }
+    }
+
+    function renderInventory() {
+        const list = document.getElementById('inv-list');
+        list.innerHTML = '';
+        STATE.inventory.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = `inv-row ${idx === STATE.selectedInv ? 'selected' : ''}`;
+            div.innerHTML = `<span class="text-2xl mr-3">${item.icon}</span><div><div class="font-bold text-sm">${item.name}</div><div class="text-[10px] text-gray-400">${item.desc}</div></div>`;
+            div.addEventListener('click', () => {
+                STATE.selectedInv = idx;
+                renderInventory();
+            });
+            list.appendChild(div);
+        });
+        if (STATE.inventory.length === 0) list.innerHTML = '<div class="text-center text-gray-600 text-xs py-2">Trống rỗng</div>';
+    }
+
+    function showDialog(name, text) {
+        STATE.uiState = 'DIALOG';
+        document.getElementById('dialog-name').innerText = name;
+        document.getElementById('dialog-text').innerText = text;
+        dialogEl.style.display = 'block';
+    }
+    function closeDialog() {
+        STATE.uiState = 'NONE';
+        dialogEl.style.display = 'none';
+    }
+
+    function showFlash(msg) {
+        const f = document.getElementById('flash-msg');
+        f.innerText = msg;
+        f.style.display = 'block';
+        clearTimeout(flashTimeout);
+        flashTimeout = setTimeout(() => f.style.display = 'none', 2000);
+    }
+
+    function setProgress(level) {
+        const current = Number(localStorage.getItem('mln11Progress') || '0');
+        if (level > current) localStorage.setItem('mln11Progress', String(level));
+    }
+
+    function dist(x1, y1, x2, y2) { return Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2-y1, 2)); }
+
+    window.onload = init;
+</script>
+</body>
+</html>
